@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { FirebaseService } from './firebase.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
+import * as firebase from 'firebase/app';
 
 
 const firebaseProvider = {
@@ -20,8 +21,10 @@ const firebaseProvider = {
       auth_provider_x509_cert_url: configService.get<string>('AUTH_CERT_URL'),
       client_x509_cert_url: configService.get<string>('CLIENT_CERT_URL'),
       universe_domain: configService.get<string>('UNIVERSAL_DOMAIN'),
+      apiKey: configService.get<string>('API_KEY'),
     } as admin.ServiceAccount;
 
+    firebase.initializeApp(firebaseConfig);
     return admin.initializeApp({
       credential: admin.credential.cert(firebaseConfig),
       databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
