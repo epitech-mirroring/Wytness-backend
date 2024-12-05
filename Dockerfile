@@ -2,6 +2,10 @@ FROM node:lts
 
 COPY package*.json ./
 
+ARG PORT
+
+ENV PORT=${PORT}
+
 RUN npm install
 
 COPY ./prisma ./prisma
@@ -13,6 +17,6 @@ COPY ./nest-cli.json ./
 
 RUN npx prisma generate
 
-EXPOSE 3000
+EXPOSE ${PORT}
 
 CMD ["bash","./entrypoint.sh"]

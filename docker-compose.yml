@@ -1,11 +1,6 @@
 services:
   wytness-backend:
     container_name: wytness-nest_backend
-    build:
-      context: ./
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
     env_file:
       - .env
     environment:
@@ -13,6 +8,14 @@ services:
       POSTGRES_HOST: wytness-postgres
       DATABASE_URL: >
         postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@wytness-postgres:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV}
+        PORT: ${PORT}
+    ports:
+      - "${PORT}:${PORT}"
     depends_on:
       wytness-postgres:
         condition: service_healthy
