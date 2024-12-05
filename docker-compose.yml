@@ -1,0 +1,44 @@
+services:
+  wytness-backend:
+    container_name: wytness-nest_backend
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      POSTGRES_HOST: wytness-postgres
+      DATABASE_URL: >
+        postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@wytness-postgres:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public
+    depends_on:
+      wytness-postgres:
+        condition: service_healthy
+    networks:
+      - wytness-net
+
+  wytness-postgres:
+    image: postgres:15
+    container_name: wytness-postgres_db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: wytness-postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - wytness-net
+    healthcheck:
+      test: "pg_isready --username=${POSTGRES_USER} --dbname=${POSTGRES_DB}"
+      interval: 2s
+      timeout: 10s
+      retries: 5
+
+networks:
+  wytness-net:
+    external: false
+
+volumes:
+  pgdata:
