@@ -1,4 +1,4 @@
-FROM node:lts
+FROM node:lts as base
 
 COPY package*.json ./
 
@@ -6,6 +6,7 @@ ARG PORT
 
 ENV PORT=${PORT}
 
+FROM base AS install
 RUN npm install
 
 COPY ./prisma ./prisma
