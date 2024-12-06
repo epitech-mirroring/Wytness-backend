@@ -28,6 +28,62 @@
 
 ## Project setup
 
+
+### 🐳 Docker setup
+
+The project is setup to run with docker and docker-compose. The project is composed of the following services:
+- Backend: NestJS application
+- Database: Postgres database
+
+#### Prerequisites
+- Docker
+- Docker Compose
+- Create a .env file in the root of the project and add the following variables
+  - Database variables:
+```  
+    - POSTGRES_USER=admin
+    - POSTGRES_PASSWORD=admin
+    - POSTGRES_DB=wytnessdb
+    - POSTGRES_PORT=5432
+    - POSTGRES_HOST=localhost
+```
+- Backend variables:
+```
+    - PORT=<Choose a port for the backend>
+    - DATABASE_URL=DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB?schema=public"
+```
+- Firebase variables : CF [How to get the google firebase credentials](#how-to-get-the-google-firebase-credentials)
+```
+    - TYPE=<Type>
+    - PROJECT_ID=<Project ID>
+    - PRIVATE_KEY_ID=<Private Key ID>
+    - PRIVATE_KEY=<Private Key>
+    - CLIENT_EMAIL=<Client Email>
+    - CLIENT_ID=<Client ID>
+    - UTH_URI=<Auth URI>
+    - TOKEN_URI=<Token URI>
+    - AUTH_CERT_URL=<Auth Cert URL>
+    - CLIENT_CERT_URL=<Client Cert URL>
+    - UNIVERSAL_DOMAIN=<Universal Domain>
+    - API_KEY=<API Key>
+```
+
+Use the following command to start the project with docker
+
+```bash
+$ docker-compose up --build
+```
+
+Or use the detached mode :
+
+```bash
+$ docker-compose up --build -d
+```
+
+### 🔧 Manual setup
+
+If you dont want to use docker, you can setup the project manually by following the steps below.
+
 ```bash
 $ npm install
 ```
@@ -70,6 +126,15 @@ $ mau deploy
 ```
 
 With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+
+
+## How to get the google firebase credentials
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Click on the gear icon and go to Project Settings.
+3. Go to the Service Accounts tab.
+4. Click on the Generate New Private Key button to download a JSON file with your service account credentials.
+5. Save the JSON file in the root of the project and rename it to `firebase-credentials.json`.
+6. Add the following environment variables to your `.env` file.
 
 ## Resources
 
