@@ -6,10 +6,11 @@ import { UsersModule } from './modules/users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { FirebaseModule } from './providers/firebase/firebase.module';
 import { AuthModule } from './modules/auth/auth.module';
+import {TelegramModule} from "./modules/telegram/telegram.module";
 
 @Module({
   // Import the PrismaModule to use the PrismaService in the AppService
-  imports: [PrismaModule, UsersModule, ConfigModule.forRoot({ cache: true }), FirebaseModule, AuthModule],
+  imports: [PrismaModule, UsersModule, ConfigModule.forRoot({ cache: true }), FirebaseModule, AuthModule, TelegramModule],
   controllers: [AppController],
   providers: [AppService],
 })
