@@ -15,10 +15,51 @@ datasource db {
 
 // Temporary model
 model User {
-  id              Int           @id @default(autoincrement())
-  email           String        @unique
-  name            String
-  surname         String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                      Int                       @id @default(autoincrement())
+  email                   String                    @unique
+  name                    String
+  surname                 String
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  services                ServiceUser[]
+  ServiceVerificationCode ServiceVerificationCode[]
+}
+
+model Service {
+  id                      Int                       @id @default(autoincrement())
+  name                    String                    @unique
+  description             String
+  users                   ServiceUser[]
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  ServiceVerificationCode ServiceVerificationCode[]
+}
+
+model ServiceUser {
+  id        Int      @id @default(autoincrement())
+  serviceId Int
+  userId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dataJson Json    @default("{}")
+  service  Service @relation(fields: [serviceId], references: [id])
+  user     User    @relation(fields: [userId], references: [id])
+
+  @@unique([serviceId, userId])
+}
+
+model ServiceVerificationCode {
+  id        Int      @id @default(autoincrement())
+  code      String
+  serviceId Int
+  userId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([serviceId, userId])
+  @@unique([code, serviceId])
 }
