@@ -13,6 +13,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ServiceType {
+  SPOTIFY
+  NONE
+}
+
 // Temporary model
 model User {
   id              Int           @id @default(autoincrement())
@@ -21,4 +26,18 @@ model User {
   surname         String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  credentials     Credential[]
+}
+
+model Credential {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  serviceType     ServiceType
+  accessToken     String        @unique
+  refreshToken    String        @unique
+  expiresAt       DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id])
 }
