@@ -30,7 +30,7 @@ export class AuthService {
             return error.message;
         });
         if (typeof user === 'object') {
-            return {token: await this.firebaseService.getApp().auth().createCustomToken(user.uid)};
+            return {token: user.accessToken};
         }
         return {error: user};
     }
@@ -49,6 +49,6 @@ export class AuthService {
             return {error: 'PostgreSQL: Error (user already exists with that email)'};
         }
         await this.usersService.createUser(email, name, surname);
-        return {token: await this.firebaseService.getApp().auth().createCustomToken(user.uid)};
+        return {token: user.accessToken};
     }
 }
