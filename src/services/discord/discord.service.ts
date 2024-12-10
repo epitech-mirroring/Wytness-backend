@@ -129,8 +129,8 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.author.bot) {
           return;
         }
-        this._dmNew.trigger(message);
-        await this._dmSend.execute(message);
+        // TODO Find the workflow and trigger the right entrypoint
+        // this._dmNew.run(message, {user: ..., _workflowId: ..., _next: ...});
         break;
       default:
         console.log(event);
