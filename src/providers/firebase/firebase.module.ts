@@ -4,7 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import * as firebase from 'firebase/app';
 
-
 const firebaseProvider = {
   provide: 'FIREBASE_APP',
   inject: [ConfigService],
