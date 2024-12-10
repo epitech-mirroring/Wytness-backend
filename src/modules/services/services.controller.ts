@@ -9,10 +9,10 @@ import {
   Post,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
-import { ServiceWithOAuth } from '../../types';
 import { Private } from '../auth/decorators/private.decorator';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { AuthContext } from '../auth/auth.context';
+import { ServiceWithOAuth } from '../../types/services';
 
 @Controller('services')
 export class ServicesController {

@@ -1,18 +1,13 @@
-import { forwardRef, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../providers/prisma/prisma.service';
-import { Workflow, WorkflowNode } from '../../types/workflow/workflow.type';
-import { AuthContext } from '../auth/auth.context';
+import { Workflow, WorkflowNode } from '../../types/workflow';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
-import { IdOf, Node } from '../../types';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
   @Inject(PrismaService)
   private _prismaService: PrismaService;
-
-  @Inject(AuthContext)
-  private _authContext: AuthContext;
 
   @Inject(ServicesService)
   private _servicesService: ServicesService;
@@ -80,11 +75,8 @@ export class WorkflowsService implements OnModuleInit {
           const triggerNode = this._servicesService.getTrigger(
             entrypoint.nodeID,
           );
-          if (
-            !triggerNode ||
-            triggerNode.service === null ||
-            !triggerNode.service.serviceMetadata.useCron
-          ) {
+          if (!triggerNode && false) {
+            // TODO fetch the service and check if it uses cron
             continue;
           }
 
@@ -107,28 +99,16 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public getWorkflowByName(name: string): Workflow | undefined {
-    if (!this._authContext.authenticated) {
-      return undefined;
-    }
-    return this.workflows.find(
-      (workflow) =>
-        workflow.name === name && workflow.owner === this._authContext.user.id,
-    );
+    return this.workflows.find((workflow) => workflow.name === name);
   }
 
-  public listWorkflows(): Workflow[] {
-    if (!this._authContext.authenticated) {
-      return [];
-    }
-
-    return this.workflows.filter(
-      (workflow) => workflow.owner === this._authContext.user.id,
-    );
+  public listWorkflows(userId: number): Workflow[] {
+    return this.workflows.filter((workflow) => workflow.owner === userId);
   }
 
   private recursiveFindNode(
     node: WorkflowNode,
-    nodeId: IdOf<WorkflowNode>,
+    nodeId: number,
   ): WorkflowNode | undefined {
     if (node.id === nodeId) {
       return node;
@@ -144,10 +124,7 @@ export class WorkflowsService implements OnModuleInit {
     return undefined;
   }
 
-  public getNode(
-    workflowId: IdOf<Workflow>,
-    nodeId: IdOf<WorkflowNode>,
-  ): WorkflowNode | undefined {
+  public getNode(workflowId: number, nodeId: number): WorkflowNode | undefined {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
@@ -163,7 +140,7 @@ export class WorkflowsService implements OnModuleInit {
     }
   }
 
-  public runNode(nodeId: IdOf<WorkflowNode>, data: any) {
+  public runNode(nodeId: number, data: any) {
     const workflow = this.workflows.find((workflow) =>
       workflow.entrypoints.some((node) => node.id === nodeId),
     );
@@ -194,19 +171,16 @@ export class WorkflowsService implements OnModuleInit {
   public async createWorkflow(
     name: string,
     description: string,
+    userId: number,
   ): Promise<void> {
-    if (!this._authContext.authenticated) {
-      return;
-    }
-
     const workflow = new Workflow(name, description);
-    workflow.owner = this._authContext.user.id;
+    workflow.owner = userId;
 
     const dbWorkflow = await this._prismaService.workflow.create({
       data: {
         name,
         description,
-        ownerId: this._authContext.user.id,
+        ownerId: userId,
       },
     });
 
@@ -219,15 +193,11 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public async addNodeToWorkflow(
-    nodeId: IdOf<Node>,
-    workflowId: IdOf<Workflow>,
-    previousNodeId: IdOf<WorkflowNode>,
+    nodeId: number,
+    workflowId: number,
+    previousNodeId: number,
     config: any,
   ): Promise<void> {
-    if (!this._authContext.authenticated) {
-      return;
-    }
-
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
@@ -265,14 +235,10 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public async addEntrypointToWorkflow(
-    nodeId: IdOf<Node>,
-    workflowId: IdOf<Workflow>,
+    nodeId: number,
+    workflowId: number,
     config: any,
   ): Promise<void> {
-    if (!this._authContext.authenticated) {
-      return;
-    }
-
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );

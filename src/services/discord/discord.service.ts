@@ -1,12 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ServiceWithOAuth } from '../../types';
 import { ConfigService } from '@nestjs/config';
 import * as websocket from 'websocket';
 import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/create.trigger';
 import { DiscordMessageCreatedEvent } from './discord.type';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
-import { PrismaService } from '../../providers/prisma/prisma.service';
+import { ServiceWithOAuth } from '../../types/services';
 
 export type GatewayMessage = {
   op: number;

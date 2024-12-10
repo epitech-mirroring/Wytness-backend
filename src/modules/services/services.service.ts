@@ -4,32 +4,27 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { DiscordService } from '../../services/discord/discord.service';
+import { AuthContext } from '../auth/auth.context';
 import {
   Action,
-  IdOf,
   ListService,
   Service,
   ServiceWithOAuth,
   Trigger,
-} from '../../types';
-import { DiscordService } from '../../services/discord/discord.service';
-import { PrismaService } from '../../providers/prisma/prisma.service';
-import { AuthContext } from '../auth/auth.context';
+} from '../../types/services';
 
 @Injectable()
 export class ServicesService {
   services: Service[];
 
-  @Inject(PrismaService)
-  private _prismaService: PrismaService;
-
   @Inject(AuthContext)
   private _authContext: AuthContext;
 
-  @Inject(forwardRef(() => DiscordService))
-  private _discordService: DiscordService;
-
-  constructor() {
+  constructor(
+    @Inject(forwardRef(() => DiscordService))
+    private _discordService: DiscordService,
+  ) {
     this.services = [this._discordService];
   }
 
@@ -53,7 +48,7 @@ export class ServicesService {
     return this.services.map(
       (service) =>
         ({
-          ...service.serviceMetadata,
+          ...(service.serviceMetadata || {}),
           id: service.id,
           name: service.name,
           description: service.description,
@@ -92,14 +87,14 @@ export class ServicesService {
     return connections;
   }
 
-  public getTrigger(id: IdOf<Trigger>): Trigger {
+  public getTrigger(id: number): Trigger {
     return this.services
       .map((service) => service.nodes)
       .flat()
       .find((node) => node.id === id && node.type == 'trigger') as Trigger;
   }
 
-  public getAction(id: IdOf<Trigger>): Action {
+  public getAction(id: number): Action {
     return this.services
       .map((service) => service.nodes)
       .flat()

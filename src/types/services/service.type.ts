@@ -1,9 +1,9 @@
 import { ListNode, Node } from './node.type';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Trigger } from './trigger.type';
-import { IdOf, User } from '../index';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { PrismaService } from '../../providers/prisma/prisma.service';
+import { User } from '../user';
 
 export type ServiceMetadata = {
   useOAuth: boolean;
@@ -34,10 +34,6 @@ export abstract class Service implements OnModuleInit {
       useOAuth: false,
       useCron: false,
     };
-
-    for (const node of this.nodes) {
-      node.service = this;
-    }
   }
 
   async onModuleInit(): Promise<void> {
@@ -125,7 +121,7 @@ export abstract class Service implements OnModuleInit {
     return this.nodes.filter((node) => node.type === 'action');
   }
 
-  public getNodeById(id: IdOf<Node>): Node | undefined {
+  public getNodeById(id: number): Node | undefined {
     return this.nodes.find((node) => node.id === id);
   }
 
@@ -219,7 +215,7 @@ export abstract class ServiceWithOAuth extends Service {
 
   public afterLogin(): void {}
 
-  public async isUserConnected(userId: IdOf<User>): Promise<boolean> {
+  public async isUserConnected(userId: number): Promise<boolean> {
     return !!(await this._prismaService.serviceUser.findUnique({
       where: {
         serviceId_userId: {

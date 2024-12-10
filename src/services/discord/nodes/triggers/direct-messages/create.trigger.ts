@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Trigger } from '../../../../../types';
 import { DiscordMessageCreatedEvent } from '../../../discord.type';
+import { Trigger } from '../../../../../types/services';
 
 @Injectable()
 export class DirectMessageCreatedTrigger extends Trigger {

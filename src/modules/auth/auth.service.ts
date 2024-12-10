@@ -5,9 +5,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from '@firebase/auth';
-import { TokenPayload } from '../../types';
 import { Request } from 'express';
 import { AuthContext } from './auth.context';
+import { TokenPayload } from '../../types/auth';
 
 @Injectable()
 export class AuthService {

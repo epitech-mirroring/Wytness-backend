@@ -3,7 +3,7 @@ import {
   InternalServerErrorException,
   Scope,
 } from '@nestjs/common';
-import { User } from '../../types';
+import { User } from '../../types/user';
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthContext {

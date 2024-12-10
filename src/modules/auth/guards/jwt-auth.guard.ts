@@ -9,7 +9,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AuthService } from '../auth.service';
 import { IS_PUBLIC_DECORATOR_KEY } from '../decorators/public.decorator';
-import { TokenPayload } from '../../../types';
+import { TokenPayload } from '../../../types/auth';
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthGuard implements CanActivate {

@@ -1,13 +1,11 @@
-import { IdOf, Node, User } from '../index';
-
 export class WorkflowNode {
   id: number;
-  nodeID: IdOf<Node>;
+  nodeID: number;
   config: any;
 
   next: WorkflowNode[];
 
-  constructor(nodeID: IdOf<Node>, config: any) {
+  constructor(nodeID: number, config: any) {
     this.nodeID = nodeID;
     this.config = config;
   }
@@ -25,7 +23,7 @@ export class Workflow {
   id: number;
   name: string;
   description: string;
-  owner: IdOf<User>;
+  owner: number;
 
   entrypoints: WorkflowNode[];
 

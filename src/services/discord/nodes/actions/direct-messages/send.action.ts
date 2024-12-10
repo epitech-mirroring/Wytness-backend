@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Action } from '../../../../../types';
 import { DiscordSnowflake } from '../../../discord.type';
 import { ConfigService } from '@nestjs/config';
+import { Action } from '../../../../../types/services';
 
 @Injectable()
 export class DirectMessageSendAction extends Action {

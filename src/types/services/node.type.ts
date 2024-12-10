@@ -1,7 +1,4 @@
-import { Service } from './service.type';
 import { User } from '../user';
-import { IdOf } from '../index';
-import { Workflow, WorkflowNode } from '../workflow/workflow.type';
 import { Inject, Injectable } from '@nestjs/common';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 
@@ -12,8 +9,8 @@ export enum NodeType {
 
 export interface MinimalConfig {
   user: User;
-  _workflowId: IdOf<Workflow>;
-  _next: IdOf<WorkflowNode>[];
+  _workflowId: number;
+  _next: number[];
 }
 
 @Injectable()
@@ -22,7 +19,6 @@ export abstract class Node {
   private readonly name: string;
   private readonly description: string;
   public readonly type: NodeType;
-  public service: Service | null = null;
 
   @Inject()
   protected readonly _workflowService: WorkflowsService;

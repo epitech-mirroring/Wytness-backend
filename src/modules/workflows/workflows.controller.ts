@@ -13,22 +13,30 @@ import {
   WorkflowCreateDTO,
   WorkflowCreateNodeDTO,
 } from '../../dtos/workflows/workflows.dto';
+import { AuthContext } from '../auth/auth.context';
 
 @Controller('workflows')
 export class WorkflowsController {
   @Inject()
   private _workflowsService: WorkflowsService;
 
+  @Inject()
+  private _authContext: AuthContext;
+
   @Private()
   @Get('/')
   async getWorkflows() {
-    return this._workflowsService.listWorkflows();
+    return this._workflowsService.listWorkflows(this._authContext.user.id);
   }
 
   @Private()
   @Post('/')
   async createWorkflow(@Body() body: WorkflowCreateDTO) {
-    return this._workflowsService.createWorkflow(body.name, body.description);
+    return this._workflowsService.createWorkflow(
+      body.name,
+      body.description,
+      this._authContext.user.id,
+    );
   }
 
   @Private()
