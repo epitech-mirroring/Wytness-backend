@@ -5,11 +5,9 @@ export abstract class Action extends Node {
     super(name, description, NodeType.ACTION);
   }
 
-  public abstract execute(data: any): any;
+  public abstract execute(data: any, config: any): any;
 
-  public _execute(data: any): void {
-    if (this.callback) {
-      this.callback(this.execute(data));
-    }
+  public async run(data: any, config: any): Promise<any> {
+    return this.execute(data, config);
   }
 }

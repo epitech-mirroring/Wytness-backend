@@ -1,6 +1,19 @@
+import { Service } from './service.type';
+import { User } from '../user';
+import { IdOf } from '../index';
+import { Workflow, WorkflowNode } from '../workflow/workflow.type';
+import { Inject } from '@nestjs/common';
+import { WorkflowsService } from '../../modules/workflows/workflows.service';
+
 export enum NodeType {
   TRIGGER = 'trigger',
   ACTION = 'action',
+}
+
+export interface MinimalConfig {
+  user: User;
+  _workflowId: IdOf<Workflow>;
+  _next: IdOf<WorkflowNode>[];
 }
 
 export abstract class Node {
@@ -8,7 +21,10 @@ export abstract class Node {
   private readonly name: string;
   private readonly description: string;
   public readonly type: NodeType;
-  callback: (data: any) => void;
+  public service: Service | null = null;
+
+  @Inject()
+  protected readonly _workflowService: WorkflowsService;
 
   protected constructor(name: string, description: string, type: NodeType) {
     this.name = name;
@@ -24,9 +40,14 @@ export abstract class Node {
     return this.description;
   }
 
-  public setCallback(callback: (data: any) => void): void {
-    this.callback = callback;
+  public async _run(data: any, config: MinimalConfig & any) {
+    const r = await this.run(data, config);
+    for (const next of config._next) {
+      this._workflowService.runNode(next, r);
+    }
   }
+
+  public abstract run(data: any, config: MinimalConfig & any): Promise<any>;
 }
 
 export type ListNode = {

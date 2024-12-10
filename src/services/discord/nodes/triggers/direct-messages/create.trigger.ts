@@ -12,7 +12,6 @@ export class DirectMessageCreatedTrigger extends Trigger {
   }
 
   public trigger(data: DiscordMessageCreatedEvent): any {
-    console.log(data.content);
     return data;
   }
 }

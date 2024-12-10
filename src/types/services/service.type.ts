@@ -7,6 +7,7 @@ import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 
 export type ServiceMetadata = {
   useOAuth: boolean;
+  useCron: boolean;
 };
 
 @Injectable()
@@ -29,7 +30,14 @@ export abstract class Service implements OnModuleInit {
     this.name = name;
     this.description = description;
     this.nodes = nodes;
-    this.serviceMetadata = serviceMetadata || { useOAuth: false };
+    this.serviceMetadata = serviceMetadata || {
+      useOAuth: false,
+      useCron: false,
+    };
+
+    for (const node of this.nodes) {
+      node.service = this;
+    }
   }
 
   async onModuleInit(): Promise<void> {

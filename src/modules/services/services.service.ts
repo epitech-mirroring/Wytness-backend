@@ -1,5 +1,12 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { ListService, Service, ServiceWithOAuth } from '../../types';
+import {
+  Action,
+  IdOf,
+  ListService,
+  Service,
+  ServiceWithOAuth,
+  Trigger,
+} from '../../types';
 import { DiscordService } from '../../services/discord/discord.service';
 import { PrismaService } from '../../providers/prisma/prisma.service';
 import { AuthContext } from '../auth/auth.context';
@@ -75,5 +82,19 @@ export class ServicesService {
     }
 
     return connections;
+  }
+
+  public getTrigger(id: IdOf<Trigger>): Trigger {
+    return this.services
+      .map((service) => service.nodes)
+      .flat()
+      .find((node) => node.id === id && node.type == 'trigger') as Trigger;
+  }
+
+  public getAction(id: IdOf<Trigger>): Action {
+    return this.services
+      .map((service) => service.nodes)
+      .flat()
+      .find((node) => node.id === id && node.type == 'action') as Action;
   }
 }

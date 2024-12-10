@@ -7,6 +7,7 @@ import { FirebaseModule } from './providers/firebase/firebase.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DiscordModule } from './services/discord/discord.module';
 import { ServicesModule } from './modules/services/services.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ServicesModule } from './modules/services/services.module';
     AuthModule,
     ServicesModule,
     DiscordModule,
+    WorkflowsModule,
   ],
   controllers: [AppController],
   providers: [],

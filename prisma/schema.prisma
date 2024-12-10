@@ -23,6 +23,7 @@ model User {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   services   ServiceUser[]
+  workflows  Workflow[]
 }
 
 model Service {
@@ -37,9 +38,9 @@ model Service {
 
 model ServiceUser {
   id        Int     @id @default(autoincrement())
-  service   Service @relation(fields: [serviceId], references: [id])
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   serviceId Int
-  user      User    @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
 
   customData Json @default("{}")
@@ -60,6 +61,34 @@ model Node {
   updatedAt   DateTime @updatedAt
   type        NodeType
 
-  service   Service @relation(fields: [serviceId], references: [id])
-  serviceId Int
+  service      Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId    Int
+  WorkflowNode WorkflowNode[]
+}
+
+model WorkflowNode {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId Int
+  node       Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  nodeId     Int
+  config     Json     @default("{}")
+
+  previousNodes WorkflowNode[] @relation("NextNodes")
+  nextNodes     WorkflowNode[] @relation("NextNodes")
+}
+
+model Workflow {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  entrypoints WorkflowNode[]
+
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 }

@@ -9,5 +9,6 @@ import { DiscordModule } from '../../services/discord/discord.module';
   imports: [PrismaModule, AuthModule, DiscordModule],
   providers: [ServicesService],
   controllers: [ServicesController],
+  exports: [ServicesService],
 })
 export class ServicesModule {}
