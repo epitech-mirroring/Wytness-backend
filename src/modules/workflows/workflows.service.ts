@@ -94,9 +94,14 @@ export class WorkflowsService implements OnModuleInit {
           const triggerNode = this._servicesService.getTrigger(
             entrypoint.nodeID,
           );
-          if (!triggerNode || true) {
+          if (!triggerNode) {
             continue;
           }
+          const service = this._servicesService.getServiceFromNode(entrypoint.nodeID);
+          if (!service || !service.needCron()) {
+            continue;
+          }
+
 
           const shouldRun = triggerNode.isTriggered(owner, entrypoint.config);
 

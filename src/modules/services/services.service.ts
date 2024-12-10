@@ -97,4 +97,10 @@ export class ServicesService {
       .flat()
       .find((node) => node.id === id) as Trigger | Action;
   }
+
+  public getServiceFromNode(nodeId: number): Service {
+    return this.services.find((service) =>
+      service.nodes.some((node) => node.id === nodeId),
+    );
+  }
 }
