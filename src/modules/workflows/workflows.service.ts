@@ -4,7 +4,7 @@ import { Workflow, WorkflowNode } from '../../types/workflow/workflow.type';
 import { AuthContext } from '../auth/auth.context';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
-import { IdOf, Node } from '../../types';
+import { IdOf, MinimalConfig, Node } from '../../types';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
@@ -296,5 +296,18 @@ export class WorkflowsService implements OnModuleInit {
     const node = new WorkflowNode(nodeId, config);
     node.id = dbNode.id;
     workflow.addEntrypoint(node);
+  }
+
+  public findAndTrigger(
+    data: any,
+    predicate: (entrypoint: WorkflowNode) => boolean,
+  ) {
+    for (const workflow of this.workflows) {
+      for (const entrypoint of workflow.entrypoints) {
+        if (predicate(entrypoint)) {
+          this.runNode(entrypoint.nodeID, data);
+        }
+      }
+    }
   }
 }

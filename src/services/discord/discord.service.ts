@@ -5,6 +5,7 @@ import * as websocket from 'websocket';
 import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/create.trigger';
 import { DiscordMessageCreatedEvent } from './discord.type';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
+import { WorkflowsService } from '../../modules/workflows/workflows.service';
 
 export type GatewayMessage = {
   op: number;
@@ -17,6 +18,9 @@ export type GatewayMessage = {
 export class DiscordService extends ServiceWithOAuth {
   @Inject()
   private readonly _configService: ConfigService;
+
+  @Inject()
+  private _w: WorkflowsService;
 
   ws: websocket.w3cwebsocket;
   ready = false;
@@ -129,8 +133,11 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.author.bot) {
           return;
         }
-        // TODO Find the workflow and trigger the right entrypoint
-        // this._dmNew.run(message, {user: ..., _workflowId: ..., _next: ...});
+        this._w.findAndTrigger(message, (entrypoint) => {
+          if (entrypoint.nodeID === this._dmNew.id) {
+            return entrypoint.config.channelId === message.channel_id;
+          }
+        });
         break;
       default:
         console.log(event);

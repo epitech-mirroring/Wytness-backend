@@ -5,9 +5,10 @@ import { AuthModule } from '../../modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/create.trigger';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
+import { WorkflowsModule } from '../../modules/workflows/workflows.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ConfigModule],
+  imports: [PrismaModule, AuthModule, ConfigModule, WorkflowsModule],
   providers: [
     DiscordService,
     DirectMessageCreatedTrigger,
