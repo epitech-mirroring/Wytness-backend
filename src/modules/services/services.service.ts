@@ -90,4 +90,11 @@ export class ServicesService {
       .flat()
       .find((node) => node.id === id && node.type == 'action') as Action;
   }
+
+  public getNode(id: number): Trigger | Action {
+    return this.services
+      .map((service) => service.nodes)
+      .flat()
+      .find((node) => node.id === id) as Trigger | Action;
+  }
 }
