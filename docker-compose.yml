@@ -1,6 +1,6 @@
 services:
   wytness-backend:
-    container_name: wytness-nest_backend
+    container_name: wytness-backend
     env_file:
       - .env
     environment:
@@ -24,7 +24,7 @@ services:
 
   wytness-postgres:
     image: postgres:15
-    container_name: wytness-postgres_db
+    container_name: wytness-postgres
     env_file:
       - .env
     environment:
