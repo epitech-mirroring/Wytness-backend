@@ -1,4 +1,9 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   Action,
   IdOf,
@@ -21,8 +26,11 @@ export class ServicesService {
   @Inject(AuthContext)
   private _authContext: AuthContext;
 
-  constructor(@Inject(DiscordService) private discordService: DiscordService) {
-    this.services = [discordService];
+  @Inject(forwardRef(() => DiscordService))
+  private _discordService: DiscordService;
+
+  constructor() {
+    this.services = [this._discordService];
   }
 
   public addService(service: Service): void {

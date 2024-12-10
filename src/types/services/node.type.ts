@@ -2,7 +2,7 @@ import { Service } from './service.type';
 import { User } from '../user';
 import { IdOf } from '../index';
 import { Workflow, WorkflowNode } from '../workflow/workflow.type';
-import { Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 
 export enum NodeType {
@@ -16,6 +16,7 @@ export interface MinimalConfig {
   _next: IdOf<WorkflowNode>[];
 }
 
+@Injectable()
 export abstract class Node {
   public id: number;
   private readonly name: string;
@@ -43,7 +44,7 @@ export abstract class Node {
   public async _run(data: any, config: MinimalConfig & any) {
     const r = await this.run(data, config);
     for (const next of config._next) {
-      this._workflowService.runNode(next, r);
+      await this._workflowService.runNode(next, r);
     }
   }
 

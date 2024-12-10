@@ -2,8 +2,8 @@ import { ListNode, Node } from './node.type';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Trigger } from './trigger.type';
 import { IdOf, User } from '../index';
-import { PrismaService } from '../../providers/prisma/prisma.service';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
+import { PrismaService } from '../../providers/prisma/prisma.service';
 
 export type ServiceMetadata = {
   useOAuth: boolean;
@@ -19,7 +19,7 @@ export abstract class Service implements OnModuleInit {
   serviceMetadata: ServiceMetadata;
 
   @Inject()
-  protected readonly _prismaService: PrismaService;
+  protected _prismaService: PrismaService;
 
   protected constructor(
     name: string,
@@ -143,6 +143,7 @@ export type OAuthEndpoints = {
   token: string;
 };
 
+@Injectable()
 export abstract class ServiceWithOAuth extends Service {
   endpoints: OAuthEndpoints;
 
@@ -153,7 +154,10 @@ export abstract class ServiceWithOAuth extends Service {
     endpoint: OAuthEndpoints,
     serviceMetadata?: Omit<ServiceMetadata, 'useOAuth'>,
   ) {
-    super(name, description, nodes, { ...serviceMetadata, useOAuth: true });
+    super(name, description, nodes, {
+      ...serviceMetadata,
+      useOAuth: true,
+    });
     this.endpoints = endpoint;
   }
 

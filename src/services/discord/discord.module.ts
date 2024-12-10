@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { DiscordService } from './discord.service';
 import { PrismaModule } from '../../providers/prisma/prisma.module';
 import { AuthModule } from '../../modules/auth/auth.module';
@@ -8,12 +8,21 @@ import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.ac
 import { WorkflowsModule } from '../../modules/workflows/workflows.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ConfigModule, WorkflowsModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    ConfigModule,
+    forwardRef(() => WorkflowsModule),
+  ],
   providers: [
     DiscordService,
     DirectMessageCreatedTrigger,
     DirectMessageSendAction,
   ],
-  exports: [DiscordService],
+  exports: [
+    DiscordService,
+    DirectMessageCreatedTrigger,
+    DirectMessageSendAction,
+  ],
 })
 export class DiscordModule {}

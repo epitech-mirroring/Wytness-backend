@@ -1,10 +1,10 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../providers/prisma/prisma.service';
 import { Workflow, WorkflowNode } from '../../types/workflow/workflow.type';
 import { AuthContext } from '../auth/auth.context';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
-import { IdOf, MinimalConfig, Node } from '../../types';
+import { IdOf, Node } from '../../types';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
@@ -91,7 +91,7 @@ export class WorkflowsService implements OnModuleInit {
           const shouldRun = triggerNode.isTriggered(owner, entrypoint.config);
 
           if (shouldRun) {
-            triggerNode.trigger(
+            await triggerNode._run(
               {},
               {
                 ...entrypoint.config,
@@ -184,7 +184,7 @@ export class WorkflowsService implements OnModuleInit {
     if (!action) {
       return;
     }
-    return action.execute(data, {
+    return action._run(data, {
       user: owner,
       _workflowId: workflow.id,
       _next: node.next.map((node) => node.nodeID),
@@ -298,14 +298,14 @@ export class WorkflowsService implements OnModuleInit {
     workflow.addEntrypoint(node);
   }
 
-  public findAndTrigger(
+  public async findAndTrigger(
     data: any,
     predicate: (entrypoint: WorkflowNode) => boolean,
   ) {
     for (const workflow of this.workflows) {
       for (const entrypoint of workflow.entrypoints) {
         if (predicate(entrypoint)) {
-          this.runNode(entrypoint.nodeID, data);
+          await this.runNode(entrypoint.nodeID, data);
         }
       }
     }

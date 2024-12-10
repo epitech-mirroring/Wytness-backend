@@ -6,6 +6,7 @@ import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/cr
 import { DiscordMessageCreatedEvent } from './discord.type';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
+import { PrismaService } from '../../providers/prisma/prisma.service';
 
 export type GatewayMessage = {
   op: number;
@@ -19,16 +20,14 @@ export class DiscordService extends ServiceWithOAuth {
   @Inject()
   private readonly _configService: ConfigService;
 
-  @Inject()
+  @Inject(WorkflowsService)
   private _w: WorkflowsService;
 
   ws: websocket.w3cwebsocket;
   ready = false;
 
   constructor(
-    @Inject(DirectMessageCreatedTrigger)
     private _dmNew: DirectMessageCreatedTrigger,
-    @Inject(DirectMessageSendAction)
     private _dmSend: DirectMessageSendAction,
   ) {
     super(
@@ -133,7 +132,7 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.author.bot) {
           return;
         }
-        this._w.findAndTrigger(message, (entrypoint) => {
+        await this._w.findAndTrigger(message, (entrypoint) => {
           if (entrypoint.nodeID === this._dmNew.id) {
             return entrypoint.config.channelId === message.channel_id;
           }
