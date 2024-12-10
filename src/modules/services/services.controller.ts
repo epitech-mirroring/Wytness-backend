@@ -63,6 +63,6 @@ export class ServicesController {
   @Private()
   @Get('/connected')
   async getConnectedServices() {
-    return this._servicesService.getConnections();
+    return this._servicesService.getConnections(this._authContext.user.id);
   }
 }

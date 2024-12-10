@@ -5,7 +5,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { DiscordService } from '../../services/discord/discord.service';
-import { AuthContext } from '../auth/auth.context';
 import {
   Action,
   ListService,
@@ -17,9 +16,6 @@ import {
 @Injectable()
 export class ServicesService {
   services: Service[];
-
-  @Inject(AuthContext)
-  private _authContext: AuthContext;
 
   constructor(
     @Inject(forwardRef(() => DiscordService))
@@ -63,19 +59,13 @@ export class ServicesService {
     );
   }
 
-  public async getConnections(): Promise<any> {
-    if (!this._authContext.authenticated) {
-      throw new UnauthorizedException('User is not authenticated');
-    }
-
+  public async getConnections(userId: number): Promise<any> {
     const connections = [];
 
     for (const service of this.services) {
       if (service.serviceMetadata.useOAuth) {
         const oauthService = service as ServiceWithOAuth;
-        const connected = await oauthService.isUserConnected(
-          this._authContext.user.id,
-        );
+        const connected = await oauthService.isUserConnected(userId);
         connections.push({
           serviceId: service.id,
           connected,
