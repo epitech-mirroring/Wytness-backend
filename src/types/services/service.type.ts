@@ -125,6 +125,10 @@ export abstract class Service implements OnModuleInit {
     return this.nodes.find((node) => node.id === id);
   }
 
+  public needCron(): boolean {
+    return this.serviceMetadata.useCron;
+  }
+
   public findTrigger(name: string): Trigger | undefined {
     return this.getTriggers().find((trigger) => trigger.getName() === name);
   }
