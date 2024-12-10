@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { DiscordService } from '../../services/discord/discord.service';
+import { SpotifyService } from 'src/services/spotify/spotify.service';
 import {
   Action,
   ListService,
@@ -20,8 +21,10 @@ export class ServicesService {
   constructor(
     @Inject(forwardRef(() => DiscordService))
     private _discordService: DiscordService,
+    @Inject(forwardRef(() => SpotifyService))
+    private _spotifyService: SpotifyService,
   ) {
-    this.services = [this._discordService];
+    this.services = [this._discordService, this._spotifyService];
   }
 
   public addService(service: Service): void {
@@ -89,5 +92,13 @@ export class ServicesService {
       .map((service) => service.nodes)
       .flat()
       .find((node) => node.id === id && node.type == 'action') as Action;
+  }
+
+  public getIdFromName(name: string): number {
+    return this.services.find((service) => service.name === name)?.id;
+  }
+
+  public getServiceFromName(name: string): Service {
+    return this.services.find((service) => service.name === name);
   }
 }

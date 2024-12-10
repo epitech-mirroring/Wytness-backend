@@ -13,7 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Temporary model
 model User {
   id         Int           @id @default(autoincrement())
   firebaseId String        @unique
