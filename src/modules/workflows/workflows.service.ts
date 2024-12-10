@@ -45,7 +45,12 @@ export class WorkflowsService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const dbWorkflows = await this._prismaService.workflow.findMany({
       include: {
-        entrypoints: true,
+        nodes: {
+          include: {
+            previousNodes: true,
+            node: true,
+          },
+        },
       },
     });
 
@@ -54,11 +59,11 @@ export class WorkflowsService implements OnModuleInit {
       workflow.id = dbWorkflow.id;
       workflow.owner = dbWorkflow.ownerId;
 
-      for (const dbEntrypoint of dbWorkflow.entrypoints) {
-        let entrypoint = new WorkflowNode(
-          dbEntrypoint.nodeId,
-          dbEntrypoint.config,
-        );
+      for (const node of dbWorkflow.nodes) {
+        if (node.previousNodes.length > 0 || node.node.type === 'ACTION') {
+          continue;
+        }
+        let entrypoint = new WorkflowNode(node.nodeId, node.config);
 
         entrypoint = await this.recursiveEntrypointSetup(entrypoint);
 
