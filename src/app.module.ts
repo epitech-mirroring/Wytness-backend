@@ -19,6 +19,6 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(AuthMiddleware)
-      .forRoutes('spotify/login', 'spotify/disconnect');
+      .forRoutes('spotify/login', 'spotify/disconnect', 'users/me');
   }
 }
