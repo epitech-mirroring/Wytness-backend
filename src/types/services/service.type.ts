@@ -272,6 +272,34 @@ export abstract class ServiceWithOAuth extends Service {
   abstract getClientSecret(): string;
   abstract getScopes(): string[];
   abstract getRedirectUri(): string;
+
+  protected info(msg: any, ...args: any[]): void {
+    console.info(
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] ${msg}`,
+      ...args,
+    );
+  }
+
+  protected error(msg: any, ...args: any[]): void {
+    console.error(
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] ${msg}`,
+      ...args,
+    );
+  }
+
+  protected warn(msg: any, ...args: any[]): void {
+    console.warn(
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] ${msg}`,
+      ...args,
+    );
+  }
+
+  protected debug(msg: any, ...args: any[]): void {
+    console.debug(
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] ${msg}`,
+      ...args,
+    );
+  }
 }
 
 export type ListService = {

@@ -304,4 +304,8 @@ export class WorkflowsService implements OnModuleInit {
       }
     }
   }
+
+  public getServices(): ServicesService {
+    return this._servicesService;
+  }
 }

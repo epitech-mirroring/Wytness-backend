@@ -72,7 +72,7 @@ export class DiscordService extends ServiceWithOAuth {
     this.ws = new websocket.w3cwebsocket(`${gatewayUrl}?v=10&encoding=json`);
 
     this.ws.onopen = () => {
-      console.info('Connected to discord gateway');
+      this.info('Connected to discord gateway');
     };
 
     this.ws.onmessage = (message) => {
@@ -117,11 +117,11 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.t === 'READY') {
           this.ready = true;
         } else {
-          this.handleEvent(message).then().catch(console.error);
+          this.handleEvent(message).then().catch(this.error);
         }
         break;
       default:
-        console.info('Unhandled discord gateway message', message);
+        this.warn('Unhandled discord gateway message', message);
         break;
     }
   }
@@ -140,7 +140,7 @@ export class DiscordService extends ServiceWithOAuth {
         });
         break;
       default:
-        console.info('Unhandled discord event', event);
+        this.warn('Unhandled discord event', event);
         break;
     }
   }

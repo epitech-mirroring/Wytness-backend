@@ -1,5 +1,6 @@
 import { User } from '../user';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
+import { Service } from './service.type';
 
 export enum NodeType {
   TRIGGER = 'trigger',
@@ -42,6 +43,46 @@ export abstract class Node {
   }
 
   public abstract run(data: any, config: MinimalConfig & any): Promise<any>;
+
+  protected getService(): Service {
+    return this.getWorkflowService().getServices().getServiceFromNode(this.id);
+  }
+
+  protected info(msg: any, ...args: any[]): void {
+    const serviceName =
+      this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
+    console.info(
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] ${msg}`,
+      ...args,
+    );
+  }
+
+  protected error(msg: any, ...args: any[]): void {
+    const serviceName =
+      this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
+    console.error(
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] ${msg}`,
+      ...args,
+    );
+  }
+
+  protected warn(msg: any, ...args: any[]): void {
+    const serviceName =
+      this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
+    console.warn(
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] ${msg}`,
+      ...args,
+    );
+  }
+
+  protected debug(msg: any, ...args: any[]): void {
+    const serviceName =
+      this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
+    console.debug(
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] ${msg}`,
+      ...args,
+    );
+  }
 }
 
 export type ListNode = {
