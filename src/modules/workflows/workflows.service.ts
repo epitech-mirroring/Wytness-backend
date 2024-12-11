@@ -82,8 +82,6 @@ export class WorkflowsService implements OnModuleInit {
         workflow.addNode(node);
       }
 
-      console.log(workflow);
-
       this.workflows.push(workflow);
     }
 
@@ -97,11 +95,12 @@ export class WorkflowsService implements OnModuleInit {
           if (!triggerNode) {
             continue;
           }
-          const service = this._servicesService.getServiceFromNode(entrypoint.nodeID);
+          const service = this._servicesService.getServiceFromNode(
+            entrypoint.nodeID,
+          );
           if (!service || !service.needCron()) {
             continue;
           }
-
 
           const shouldRun = triggerNode.isTriggered(owner, entrypoint.config);
 

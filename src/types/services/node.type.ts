@@ -1,5 +1,4 @@
 import { User } from '../user';
-import { Inject, Injectable } from '@nestjs/common';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 
 export enum NodeType {
@@ -13,15 +12,11 @@ export interface MinimalConfig {
   _next: number[];
 }
 
-@Injectable()
 export abstract class Node {
   public id: number;
   private readonly name: string;
   private readonly description: string;
   public readonly type: NodeType;
-
-  @Inject()
-  protected readonly _workflowService: WorkflowsService;
 
   protected constructor(name: string, description: string, type: NodeType) {
     this.name = name;
@@ -37,10 +32,12 @@ export abstract class Node {
     return this.description;
   }
 
+  public abstract getWorkflowService(): WorkflowsService;
+
   public async _run(data: any, config: MinimalConfig & any) {
     const r = await this.run(data, config);
     for (const next of config._next) {
-      await this._workflowService.runNode(next, r);
+      await this.getWorkflowService().runNode(next, r);
     }
   }
 

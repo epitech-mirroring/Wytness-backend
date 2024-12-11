@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as websocket from 'websocket';
 import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/create.trigger';
@@ -20,7 +20,7 @@ export class DiscordService extends ServiceWithOAuth {
   @Inject()
   private readonly _configService: ConfigService;
 
-  @Inject(WorkflowsService)
+  @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
 
   ws: websocket.w3cwebsocket;
@@ -54,7 +54,7 @@ export class DiscordService extends ServiceWithOAuth {
     if (process.env.NODE_ENV === 'production') {
       return 'https://wytness.fr/services/discord/connect';
     }
-    return 'https://wytness.fr/services/discord/connect';
+    return 'http://localhost:3000/services/discord/connect';
   }
 
   getScopes(): string[] {
@@ -72,7 +72,7 @@ export class DiscordService extends ServiceWithOAuth {
     this.ws = new websocket.w3cwebsocket(`${gatewayUrl}?v=10&encoding=json`);
 
     this.ws.onopen = () => {
-      console.log('Connected to discord gateway');
+      console.info('Connected to discord gateway');
     };
 
     this.ws.onmessage = (message) => {
@@ -121,7 +121,7 @@ export class DiscordService extends ServiceWithOAuth {
         }
         break;
       default:
-        console.log(message);
+        console.info('Unhandled discord gateway message', message);
         break;
     }
   }
@@ -140,7 +140,7 @@ export class DiscordService extends ServiceWithOAuth {
         });
         break;
       default:
-        console.log(event);
+        console.info('Unhandled discord event', event);
         break;
     }
   }

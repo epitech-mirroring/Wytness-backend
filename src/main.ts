@@ -17,14 +17,14 @@ const isOpenApiEnable = (argv: string[]): boolean => {
 const writeSwaggerJson = async (document: any) => {
   const jsonPath = path.join(__dirname, 'swagger.json');
   fs.writeFileSync(jsonPath, JSON.stringify(document, null, 2));
-  console.log(`Swagger JSON written to ${jsonPath}`);
-}
+  console.info(`Swagger JSON written to ${jsonPath}`);
+};
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
 
   if (isOpenApiEnable(process.argv)) {
-    console.log('OpenAPI enabled');
+    console.info('OpenAPI enabled');
     const config = new DocumentBuilder()
       .setTitle('Wytness API')
       .setDescription('The Wytness API description')
@@ -38,7 +38,7 @@ async function bootstrap() {
   }
 
   app.setGlobalPrefix('api');
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true}));
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+bootstrap().then();

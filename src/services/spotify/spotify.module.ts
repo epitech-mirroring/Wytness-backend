@@ -16,15 +16,7 @@ import { ServicesModule } from 'src/modules/services/services.module';
     forwardRef(() => WorkflowsModule),
     forwardRef(() => ServicesModule),
   ],
-  providers: [
-    SpotifyService,
-    PlayingMusicTrigger,
-    PausePlaybackAction,
-  ],
-  exports: [
-    SpotifyService,
-    PlayingMusicTrigger,
-    PausePlaybackAction,
-  ],
+  providers: [SpotifyService, PlayingMusicTrigger, PausePlaybackAction],
+  exports: [SpotifyService, PlayingMusicTrigger, PausePlaybackAction],
 })
 export class SpotifyModule {}

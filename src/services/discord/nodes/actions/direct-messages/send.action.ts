@@ -1,12 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DiscordSnowflake } from '../../../discord.type';
 import { ConfigService } from '@nestjs/config';
 import { Action } from '../../../../../types/services';
+import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 
 @Injectable()
 export class DirectMessageSendAction extends Action {
   @Inject()
   private readonly _configService: ConfigService;
+
+  @Inject(forwardRef(() => WorkflowsService))
+  public _w: WorkflowsService;
 
   constructor() {
     super('Direct Message Send Action', 'Send a direct message to a user');
@@ -27,5 +31,9 @@ export class DirectMessageSendAction extends Action {
         body: JSON.stringify({ content: data.content }),
       },
     );
+  }
+
+  public getWorkflowService(): WorkflowsService {
+    return this._w;
   }
 }

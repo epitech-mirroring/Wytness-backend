@@ -1,17 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ServiceWithOAuth } from 'src/types/services/service.type';
 import { ConfigService } from '@nestjs/config';
 import { PlayingMusicTrigger } from './nodes/triggers/status/playing.trigger';
 import { PausePlaybackAction } from './nodes/actions/player/pause.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 
-
 @Injectable()
 export class SpotifyService extends ServiceWithOAuth {
   @Inject()
   private readonly _configService: ConfigService;
 
-  @Inject(WorkflowsService)
+  @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
 
   constructor(
@@ -45,6 +44,11 @@ export class SpotifyService extends ServiceWithOAuth {
   }
 
   getScopes(): string[] {
-    return ['user-read-private', 'user-read-email', 'user-read-playback-state', 'user-modify-playback-state'];
+    return [
+      'user-read-private',
+      'user-read-email',
+      'user-read-playback-state',
+      'user-modify-playback-state',
+    ];
   }
 }
