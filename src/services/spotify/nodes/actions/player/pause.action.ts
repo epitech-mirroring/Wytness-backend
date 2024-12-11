@@ -1,18 +1,10 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Action } from 'src/types/services/action.type';
 import { ServiceWithOAuth } from 'src/types/services/service.type';
-import { ServicesService } from 'src/modules/services/services.service';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 
 @Injectable()
 export class PausePlaybackAction extends Action {
-  @Inject()
-  private readonly _configService: ConfigService;
-
-  @Inject(forwardRef(() => ServicesService))
-  private _servicesService: ServicesService;
-
   @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
 
@@ -22,7 +14,7 @@ export class PausePlaybackAction extends Action {
 
   async execute(data: any, config: any): Promise<void> {
     const user = config.user;
-    const service = this._servicesService.getServiceByName('Spotify');
+    const service = this.getService();
     if (!service) {
       throw new Error('Service not found');
     }

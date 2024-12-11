@@ -2,14 +2,10 @@ import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ServiceWithOAuth } from 'src/types/services/service.type';
 import { Trigger } from 'src/types/services/trigger.type';
 import { User } from 'src/types/user/user.type';
-import { ServicesService } from 'src/modules/services/services.service';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 
 @Injectable()
 export class PlayingMusicTrigger extends Trigger {
-  @Inject(forwardRef(() => ServicesService))
-  private _servicesService: ServicesService;
-
   @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
 
@@ -19,7 +15,7 @@ export class PlayingMusicTrigger extends Trigger {
 
   public async trigger(data: any, config: any): Promise<any> {
     const user = config.user;
-    const service = this._servicesService.getServiceByName('Spotify');
+    const service = this.getService();
     if (!service) {
       throw new Error('Service not found');
     }
@@ -36,7 +32,7 @@ export class PlayingMusicTrigger extends Trigger {
 
   public async isTriggered(user: User, config: any): Promise<boolean> {
     void config;
-    const service = this._servicesService.getServiceByName('Spotify');
+    const service = this.getService();
     if (!service) {
       throw new Error('Service not found');
     }
