@@ -52,9 +52,9 @@ export class DiscordService extends ServiceWithOAuth {
 
   getRedirectUri(): string {
     if (process.env.NODE_ENV === 'production') {
-      return 'https://wytness.com/services/discord/connect';
+      return 'https://wytness.fr/services/discord/connect';
     }
-    return 'http://localhost:3000/services/discord/connect';
+    return 'https://wytness.fr/services/discord/connect';
   }
 
   getScopes(): string[] {
