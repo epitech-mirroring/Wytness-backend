@@ -1,9 +1,4 @@
-import {
-  forwardRef,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DiscordService } from '../../services/discord/discord.service';
 import { SpotifyService } from 'src/services/spotify/spotify.service';
 import {
@@ -100,5 +95,18 @@ export class ServicesService {
 
   public getServiceFromName(name: string): Service {
     return this.services.find((service) => service.name === name);
+  }
+
+  public getNode(id: number): Trigger | Action {
+    return this.services
+      .map((service) => service.nodes)
+      .flat()
+      .find((node) => node.id === id) as Trigger | Action;
+  }
+
+  public getServiceFromNode(nodeId: number): Service {
+    return this.services.find((service) =>
+      service.nodes.some((node) => node.id === nodeId),
+    );
   }
 }

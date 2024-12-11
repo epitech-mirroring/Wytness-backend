@@ -4,6 +4,7 @@ import * as websocket from 'websocket';
 import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/create.trigger';
 import { DiscordMessageCreatedEvent } from './discord.type';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
+import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { ServiceWithOAuth } from '../../types/services';
 
@@ -28,11 +29,12 @@ export class DiscordService extends ServiceWithOAuth {
   constructor(
     private _dmNew: DirectMessageCreatedTrigger,
     private _dmSend: DirectMessageSendAction,
+    private _dmReact: DirectMessageReactAction,
   ) {
     super(
       'discord',
       'Integrate Wytness with your discord servers',
-      [_dmNew, _dmSend],
+      [_dmNew, _dmSend, _dmReact],
       {
         authorize: 'https://discord.com/oauth2/authorize',
         token: 'https://discord.com/api/oauth2/token',
@@ -50,9 +52,9 @@ export class DiscordService extends ServiceWithOAuth {
 
   getRedirectUri(): string {
     if (process.env.NODE_ENV === 'production') {
-      return 'https://wytness.com/services/discord/connect';
+      return 'https://wytness.fr/services/discord/connect';
     }
-    return 'http://localhost:3000/services/discord/connect';
+    return 'https://wytness.fr/services/discord/connect';
   }
 
   getScopes(): string[] {

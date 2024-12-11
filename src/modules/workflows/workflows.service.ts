@@ -33,7 +33,8 @@ export class WorkflowsService implements OnModuleInit {
     const nexts = [];
 
     for (const node of next) {
-      let nextNode = new WorkflowNode(node.nodeId, node.config);
+      let nextNode = new WorkflowNode(node.id, node.config);
+      nextNode.nodeID = node.nodeId;
       nextNode = await this.recursiveEntrypointSetup(nextNode);
       nexts.push(nextNode);
     }
@@ -63,12 +64,25 @@ export class WorkflowsService implements OnModuleInit {
         if (node.previousNodes.length > 0 || node.node.type === 'ACTION') {
           continue;
         }
-        let entrypoint = new WorkflowNode(node.nodeId, node.config);
+        let entrypoint = new WorkflowNode(node.id, node.config);
+        entrypoint.nodeID = node.nodeId;
 
         entrypoint = await this.recursiveEntrypointSetup(entrypoint);
 
         workflow.addEntrypoint(entrypoint);
       }
+
+      let nodes = workflow.entrypoints.map((node) => node.next).flat();
+      nodes = nodes.filter(
+        (node, index, self) =>
+          index === self.findIndex((t) => t.id === node.id),
+      );
+
+      for (const node of nodes) {
+        workflow.addNode(node);
+      }
+
+      console.log(workflow);
 
       this.workflows.push(workflow);
     }
@@ -80,10 +94,14 @@ export class WorkflowsService implements OnModuleInit {
           const triggerNode = this._servicesService.getTrigger(
             entrypoint.nodeID,
           );
-          if (!triggerNode && false) {
-            // TODO fetch the service and check if it uses cron
+          if (!triggerNode) {
             continue;
           }
+          const service = this._servicesService.getServiceFromNode(entrypoint.nodeID);
+          if (!service || !service.needCron()) {
+            continue;
+          }
+
 
           const shouldRun = triggerNode.isTriggered(owner, entrypoint.config);
 
@@ -137,8 +155,8 @@ export class WorkflowsService implements OnModuleInit {
       return undefined;
     }
 
-    for (const entrypoint of workflow.entrypoints) {
-      const found = this.recursiveFindNode(entrypoint, nodeId);
+    for (const node of workflow.entrypoints) {
+      const found = this.recursiveFindNode(node, nodeId);
       if (found) {
         return found;
       }
@@ -146,30 +164,35 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public runNode(nodeId: number, data: any) {
-    const workflow = this.workflows.find((workflow) =>
-      workflow.entrypoints.some((node) => node.id === nodeId),
+    const workflow = this.workflows.find(
+      (workflow) =>
+        workflow.entrypoints.some((node) => node.id === nodeId) ||
+        workflow.nodes.some((node) => node.id === nodeId),
     );
 
     if (!workflow) {
+      console.error('No workflow found for node', nodeId);
       return;
     }
 
     const node = this.getNode(workflow.id, nodeId);
     if (!node) {
+      console.error('No node found for id', nodeId);
       return;
     }
 
     const owner = this._usersService.getUserById(workflow.owner);
 
-    const action = this._servicesService.getAction(node.nodeID);
+    const action = this._servicesService.getNode(node.nodeID);
 
     if (!action) {
+      console.error('No action found for node', node.nodeID);
       return;
     }
     return action._run(data, {
       user: owner,
       _workflowId: workflow.id,
-      _next: node.next.map((node) => node.nodeID),
+      _next: node.next.map((node) => node.id),
     });
   }
 
@@ -234,9 +257,10 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const node = new WorkflowNode(nodeId, config);
-    node.id = dbNode.id;
+    const node = new WorkflowNode(dbNode.id, config);
+    node.nodeID = dbNode.nodeId;
     previousNode.addNext(node);
+    workflow.addNode(node);
   }
 
   public async addEntrypointToWorkflow(
@@ -271,12 +295,12 @@ export class WorkflowsService implements OnModuleInit {
 
   public async findAndTrigger(
     data: any,
-    predicate: (entrypoint: WorkflowNode) => boolean,
+    predicate: (node: WorkflowNode) => boolean,
   ) {
     for (const workflow of this.workflows) {
-      for (const entrypoint of workflow.entrypoints) {
-        if (predicate(entrypoint)) {
-          await this.runNode(entrypoint.nodeID, data);
+      for (const node of workflow.entrypoints) {
+        if (predicate(node)) {
+          await this.runNode(node.id, data);
         }
       }
     }

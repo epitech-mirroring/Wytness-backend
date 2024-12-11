@@ -15,6 +15,8 @@ export abstract class Trigger extends Node {
   public abstract trigger(data: any, config: any): any;
 
   public async isTriggered(user: User, config: any): Promise<boolean> {
+    void user;
+    void config;
     return false;
   }
 }

@@ -5,8 +5,8 @@ export class WorkflowNode {
 
   next: WorkflowNode[];
 
-  constructor(nodeID: number, config: any) {
-    this.nodeID = nodeID;
+  constructor(id: number, config: any) {
+    this.id = id;
     this.config = config;
   }
 
@@ -26,14 +26,20 @@ export class Workflow {
   owner: number;
 
   entrypoints: WorkflowNode[];
+  nodes: WorkflowNode[];
 
   constructor(name: string, description: string) {
     this.name = name;
     this.description = description;
     this.entrypoints = [];
+    this.nodes = [];
   }
 
   public addEntrypoint(node: WorkflowNode) {
     this.entrypoints.push(node);
+  }
+
+  public addNode(node: WorkflowNode) {
+    this.nodes.push(node);
   }
 }
