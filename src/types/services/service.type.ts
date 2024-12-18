@@ -143,15 +143,27 @@ export type OAuthEndpoints = {
   token: string;
 };
 
+export type OAuthConfig = {
+  clientId: string;
+  scopes: string;
+};
+
+export const OAuthDefaultConfig: OAuthConfig = {
+  clientId: 'client_id',
+  scopes: 'scopes',
+};
+
 @Injectable()
 export abstract class ServiceWithOAuth extends Service {
   endpoints: OAuthEndpoints;
+  config: OAuthConfig;
 
   protected constructor(
     name: string,
     description: string,
     nodes: Node[],
     endpoint: OAuthEndpoints,
+    config: OAuthConfig = OAuthDefaultConfig,
     serviceMetadata?: Omit<ServiceMetadata, 'useOAuth'>,
   ) {
     super(name, description, nodes, {
@@ -159,32 +171,45 @@ export abstract class ServiceWithOAuth extends Service {
       useOAuth: true,
     });
     this.endpoints = endpoint;
+    this.config = config;
   }
 
   public getEndpoints(): OAuthEndpoints {
     return this.endpoints;
   }
 
+  public parseTokenResponse(data: any): any {
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenType: data.token_type,
+      scope: data.scope,
+      expiresIn: data.expires_in,
+    };
+  }
+
   public async onOAuthCallback(
     { code }: ServiceConnectDTO,
     user: User,
   ): Promise<void> {
+    const bodyContent: any = {};
+    bodyContent[this.config.clientId] = this.getClientId();
+    bodyContent['client_secret'] = this.getClientSecret();
+    bodyContent['code'] = code;
+    bodyContent['grant_type'] = 'authorization_code';
+    bodyContent['redirect_uri'] = this.getRedirectUri();
+    bodyContent[this.config.scopes] = this.getScopes().join(' ');
+
     const result = await fetch(this.endpoints.token, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        client_id: this.getClientId(),
-        client_secret: this.getClientSecret(),
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: this.getRedirectUri(),
-        scope: this.getScopes().join(' '),
-      }).toString(),
+      body: new URLSearchParams(bodyContent).toString(),
     });
 
     if (!result.ok) {
+      this.error('Failed to fetch token', await result.text());
       throw new Error('Failed to fetch token');
     }
 
@@ -197,13 +222,7 @@ export abstract class ServiceWithOAuth extends Service {
             id: user.id,
           },
         },
-        customData: {
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token,
-          tokenType: data.token_type,
-          scope: data.scope,
-          expiresIn: data.expires_in,
-        },
+        customData: this.parseTokenResponse(data),
         service: {
           connect: {
             name: this.getName(),
@@ -214,7 +233,7 @@ export abstract class ServiceWithOAuth extends Service {
   }
 
   public buildOAuthUrl(): string {
-    return `${this.endpoints.authorize}?client_id=${this.getClientId()}&redirect_uri=${this.getRedirectUri()}&response_type=code&scope=${this.getScopes().join(' ')}`;
+    return `${this.endpoints.authorize}?${this.config.clientId}=${this.getClientId()}&redirect_uri=${this.getRedirectUri()}&response_type=code&${this.config.scopes}=${this.getScopes().join(' ')}`;
   }
 
   public afterLogin(): void {}
