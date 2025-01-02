@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../../providers/firebase/firebase.service';
 import {
   createUserWithEmailAndPassword,
@@ -8,16 +7,17 @@ import {
 import { Request } from 'express';
 import { AuthContext } from './auth.context';
 import { TokenPayload } from '../../types/auth';
+import { PrismaService } from '../../providers/prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
   @Inject()
   private _authContext: AuthContext;
 
-  constructor(
-    private usersService: UsersService,
-    private firebaseService: FirebaseService,
-  ) {}
+  @Inject()
+  private _prismaService: PrismaService;
+
+  constructor(private firebaseService: FirebaseService) {}
 
   async validateToken(token: string): Promise<boolean> {
     const decodedToken = await this.firebaseService
@@ -94,13 +94,22 @@ export class AuthService {
     if (typeof user === 'string') {
       return { error: user };
     }
-    const userExists = await this.usersService.getUserByEmail(email);
+    const userExists = !!(await this._prismaService.user.findUnique({
+      where: { email },
+    }));
     if (userExists) {
       return {
         error: 'PostgreSQL: Error (user already exists with that email)',
       };
     }
-    await this.usersService.createUser(user.uid, email, name, surname);
+    await this._prismaService.user.create({
+      data: {
+        firebaseId: user.uid,
+        email,
+        name,
+        surname,
+      },
+    });
     return {
       token: await this.firebaseService
         .getApp()
@@ -128,7 +137,9 @@ export class AuthService {
   public async setAuthContextFromTokenPayloadAsync(
     payload: TokenPayload,
   ): Promise<boolean> {
-    const user = await this.usersService.getUserByFirebaseId(payload.sub);
+    const user = await this._prismaService.user.findUnique({
+      where: { firebaseId: payload.sub },
+    });
     if (!user) {
       return false;
     }

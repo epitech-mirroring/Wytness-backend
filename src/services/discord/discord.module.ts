@@ -5,7 +5,7 @@ import { AuthModule } from '../../modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/create.trigger';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
-import { DirectMessageReactAction} from "./nodes/actions/direct-messages/react.action";
+import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.action';
 import { WorkflowsModule } from '../../modules/workflows/workflows.module';
 
 @Module({

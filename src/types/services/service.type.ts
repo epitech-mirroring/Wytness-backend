@@ -167,7 +167,7 @@ export abstract class ServiceWithOAuth extends Service {
 
   public async onOAuthCallback(
     { code }: ServiceConnectDTO,
-    user: User,
+    user: Omit<User, 'actions'>,
   ): Promise<void> {
     const result = await fetch(this.endpoints.token, {
       method: 'POST',

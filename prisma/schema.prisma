@@ -23,6 +23,7 @@ model User {
   updatedAt  DateTime      @updatedAt
   services   ServiceUser[]
   workflows  Workflow[]
+  policies   Policy[]      @relation("UserPolicy")
 }
 
 model Service {
@@ -90,4 +91,31 @@ model Workflow {
 
   ownerId Int
   owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+// ABAC
+
+model Policy {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rules     Rule[]
+  users     User[]   @relation("UserPolicy")
+}
+
+enum Effect {
+  ALLOW
+  DENY
+}
+
+model Rule {
+  id           Int    @id @default(autoincrement())
+  action       String
+  effect       Effect
+  resourceType String
+  condition    String
+  policyId     String
+  policy       Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([action, resourceType, effect, policyId])
 }
