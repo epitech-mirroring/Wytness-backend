@@ -13,12 +13,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Temporary model
 model User {
-  id              Int           @id @default(autoincrement())
-  email           String        @unique
-  name            String
-  surname         String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id         Int           @id @default(autoincrement())
+  firebaseId String        @unique
+  email      String        @unique
+  name       String
+  surname    String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  services   ServiceUser[]
+  workflows  Workflow[]
+}
+
+model Service {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  nodes       Node[]
+  users       ServiceUser[]
+}
+
+model ServiceUser {
+  id        Int     @id @default(autoincrement())
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+
+  customData Json @default("{}")
+
+  @@unique([serviceId, userId])
+}
+
+enum NodeType {
+  TRIGGER
+  ACTION
+}
+
+model Node {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  type        NodeType
+
+  service      Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId    Int
+  WorkflowNode WorkflowNode[]
+}
+
+model WorkflowNode {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId Int
+  node       Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  nodeId     Int
+  config     Json     @default("{}")
+
+  previousNodes WorkflowNode[] @relation("NextNodes")
+  nextNodes     WorkflowNode[] @relation("NextNodes")
+}
+
+model Workflow {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  nodes       WorkflowNode[]
+
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 }
