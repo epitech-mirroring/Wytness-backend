@@ -19,8 +19,9 @@ export class SpotifyService extends ServiceWithOAuth {
   ) {
     super(
       'spotify',
-      'Integrate Wytness with your spotify account',
+      'Spotify - A digital music, podcast, and video streaming service',
       [_playingMusic, _pausePlayback],
+      "https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png",
       {
         authorize: 'https://accounts.spotify.com/authorize',
         token: 'https://accounts.spotify.com/api/token',
