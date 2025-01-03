@@ -52,7 +52,8 @@ export abstract class Node {
     const serviceName =
       this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
     console.info(
-      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] ${msg}`,
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] `,
+      msg,
       ...args,
     );
   }
@@ -61,7 +62,8 @@ export abstract class Node {
     const serviceName =
       this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
     console.error(
-      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] ${msg}`,
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] `,
+      msg,
       ...args,
     );
   }
@@ -70,7 +72,8 @@ export abstract class Node {
     const serviceName =
       this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
     console.warn(
-      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] ${msg}`,
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] `,
+      msg,
       ...args,
     );
   }
@@ -79,7 +82,8 @@ export abstract class Node {
     const serviceName =
       this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
     console.debug(
-      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] ${msg}`,
+      `[${new Date().toISOString()}] [${serviceName}/${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] `,
+      msg,
       ...args,
     );
   }

@@ -21,6 +21,9 @@ export class PausePlaybackAction extends Action {
     await (service as ServiceWithOAuth).fetchWithOAuth(
       user,
       'https://api.spotify.com/v1/me/player/pause',
+      {
+        method: 'PUT',
+      },
     );
     return null;
   }

@@ -25,6 +25,7 @@ export class SpotifyService extends ServiceWithOAuth {
         authorize: 'https://accounts.spotify.com/authorize',
         token: 'https://accounts.spotify.com/api/token',
       },
+      {useCron: true},
     );
   }
 

@@ -102,7 +102,7 @@ export class WorkflowsService implements OnModuleInit {
             continue;
           }
 
-          const shouldRun = triggerNode.isTriggered(owner, entrypoint.config);
+          const shouldRun = await triggerNode.isTriggered(owner, entrypoint.config);
 
           if (shouldRun) {
             await triggerNode._run(
@@ -111,7 +111,7 @@ export class WorkflowsService implements OnModuleInit {
                 ...entrypoint.config,
                 user: owner,
                 _workflowId: workflow.id,
-                _next: entrypoint.next.map((node) => node.nodeID),
+                _next: entrypoint.next.map((node) => node.id),
               },
             );
           }
@@ -162,7 +162,7 @@ export class WorkflowsService implements OnModuleInit {
     }
   }
 
-  public runNode(nodeId: number, data: any) {
+  public async runNode(nodeId: number, data: any) {
     const workflow = this.workflows.find(
       (workflow) =>
         workflow.entrypoints.some((node) => node.id === nodeId) ||
@@ -180,7 +180,7 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const owner = this._usersService.getUserById(workflow.owner);
+    const owner = await this._usersService.getUserById(workflow.owner);
 
     const action = this._servicesService.getNode(node.nodeID);
 

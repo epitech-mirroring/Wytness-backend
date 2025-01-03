@@ -260,8 +260,8 @@ export abstract class ServiceWithOAuth extends Service {
         Authorization: `${customData.tokenType} ${customData.accessToken}`,
       },
     });
-
     if (!result.ok) {
+      this.error(result.status);
       throw new Error('Failed to fetch data');
     }
 
@@ -275,28 +275,32 @@ export abstract class ServiceWithOAuth extends Service {
 
   protected info(msg: any, ...args: any[]): void {
     console.info(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] `,
+      msg,
       ...args,
     );
   }
 
   protected error(msg: any, ...args: any[]): void {
     console.error(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] `,
+      msg,
       ...args,
     );
   }
 
   protected warn(msg: any, ...args: any[]): void {
     console.warn(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] `,
+      msg,
       ...args,
     );
   }
 
   protected debug(msg: any, ...args: any[]): void {
     console.debug(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] `,
+      msg,
       ...args,
     );
   }
