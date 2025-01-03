@@ -1,9 +1,10 @@
 import { Node, NodeType } from './node.type';
 import { User } from '../user';
+import { Field } from './field.type';
 
 export abstract class Trigger extends Node {
-  protected constructor(name: string, description: string) {
-    super(name, description, NodeType.TRIGGER);
+  protected constructor(name: string, description: string, fields: Field[] = []) {
+    super(name, description, NodeType.TRIGGER, fields);
   }
 
   public async run(data: any, config: any): Promise<any> {

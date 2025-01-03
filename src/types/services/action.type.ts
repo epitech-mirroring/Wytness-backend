@@ -1,8 +1,9 @@
 import { Node, NodeType } from './node.type';
+import { Field } from './field.type';
 
 export abstract class Action extends Node {
-  protected constructor(name: string, description: string) {
-    super(name, description, NodeType.ACTION);
+  protected constructor(name: string, description: string, fields: Field[] = []) {
+    super(name, description, NodeType.ACTION, fields);
   }
 
   public abstract execute(data: any, config: any): any;
