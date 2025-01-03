@@ -1,6 +1,7 @@
 import { User } from '../user';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { Service } from './service.type';
+import { Field } from './field.type';
 
 export enum NodeType {
   TRIGGER = 'trigger',
@@ -18,11 +19,13 @@ export abstract class Node {
   private readonly name: string;
   private readonly description: string;
   public readonly type: NodeType;
+  private readonly fields: Field[] = [];
 
-  protected constructor(name: string, description: string, type: NodeType) {
+  protected constructor(name: string, description: string, type: NodeType, fields: Field[] = []) {
     this.name = name;
     this.description = description;
     this.type = type;
+    this.fields = fields;
   }
 
   public getName(): string {
@@ -31,6 +34,10 @@ export abstract class Node {
 
   public getDescription(): string {
     return this.description;
+  }
+
+  public getFields(): Field[] {
+    return this.fields;
   }
 
   public abstract getWorkflowService(): WorkflowsService;
