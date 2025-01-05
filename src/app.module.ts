@@ -8,6 +8,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DiscordModule } from './services/discord/discord.module';
 import { ServicesModule } from './modules/services/services.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
+import { SmsService } from './services/sms/sms.service';
+import { SmsModule } from './services/sms/sms.module';
 
 @Module({
   imports: [
@@ -19,8 +21,9 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
     ServicesModule,
     DiscordModule,
     WorkflowsModule,
+    SmsModule,
   ],
   controllers: [AppController],
-  providers: [],
+  providers: [SmsService],
 })
 export class AppModule {}
