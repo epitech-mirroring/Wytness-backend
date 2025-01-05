@@ -13,6 +13,7 @@ import { Private } from '../auth/decorators/private.decorator';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { AuthContext } from '../auth/auth.context';
 import { ServiceWithOAuth } from '../../types/services';
+import { NodeDTO } from '../../dtos/node/node.dto';
 
 @Controller('services')
 export class ServicesController {
@@ -50,8 +51,14 @@ export class ServicesController {
     if (!service) {
       throw new NotFoundException('Service not found');
     }
-
-    return service.nodes;
+    const nodeDTO: NodeDTO[] = service.nodes.map((node) => ({
+      id: node.id,
+      name: node.getName(),
+      description: node.getDescription(),
+      type: node.type,
+      fields: node.getFields()
+    }));
+    return nodeDTO;
   }
 
   @Private()

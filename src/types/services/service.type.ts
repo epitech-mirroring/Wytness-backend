@@ -15,6 +15,7 @@ export abstract class Service implements OnModuleInit {
   id: number;
   name: string;
   description: string;
+  logo: string;
   nodes: Node[];
   serviceMetadata: ServiceMetadata;
 
@@ -25,6 +26,7 @@ export abstract class Service implements OnModuleInit {
     name: string,
     description: string,
     nodes: Node[],
+    logo: string,
     serviceMetadata?: ServiceMetadata,
   ) {
     this.name = name;
@@ -34,6 +36,7 @@ export abstract class Service implements OnModuleInit {
       useOAuth: false,
       useCron: false,
     };
+    this.logo = logo;
   }
 
   async onModuleInit(): Promise<void> {
@@ -49,10 +52,20 @@ export abstract class Service implements OnModuleInit {
         data: {
           name: this.name,
           description: this.description,
+          logo: this.logo,
           nodes: {
             create: this.nodes.map((node) => ({
               name: node.getName(),
               type: node.type === 'trigger' ? 'TRIGGER' : 'ACTION',
+              fields: {
+                create: node.getFields().map((field) => ({
+                  name: field.name,
+                  title: field.title,
+                  description: field.description,
+                  type: field.type,
+                  nullable: field.nullable,
+                })),
+              },
             })),
           },
         },
@@ -74,6 +87,15 @@ export abstract class Service implements OnModuleInit {
           data: {
             name: node.getName(),
             type: node.type === 'trigger' ? 'TRIGGER' : 'ACTION',
+            fields: {
+              create: node.getFields().map((field) => ({
+                name: field.name,
+                title: field.title,
+                description: field.description,
+                type: field.type,
+                nullable: field.nullable,
+              })),
+            },
             service: {
               connect: {
                 name: this.name,
@@ -151,10 +173,11 @@ export abstract class ServiceWithOAuth extends Service {
     name: string,
     description: string,
     nodes: Node[],
+    logo: string,
     endpoint: OAuthEndpoints,
     serviceMetadata?: Omit<ServiceMetadata, 'useOAuth'>,
   ) {
-    super(name, description, nodes, {
+    super(name, description, nodes, logo, {
       ...serviceMetadata,
       useOAuth: true,
     });
@@ -260,8 +283,8 @@ export abstract class ServiceWithOAuth extends Service {
         Authorization: `${customData.tokenType} ${customData.accessToken}`,
       },
     });
-
     if (!result.ok) {
+      this.error(result.status);
       throw new Error('Failed to fetch data');
     }
 
@@ -275,28 +298,32 @@ export abstract class ServiceWithOAuth extends Service {
 
   protected info(msg: any, ...args: any[]): void {
     console.info(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/INFO] `,
+      msg,
       ...args,
     );
   }
 
   protected error(msg: any, ...args: any[]): void {
     console.error(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/ERROR] `,
+      msg,
       ...args,
     );
   }
 
   protected warn(msg: any, ...args: any[]): void {
     console.warn(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/WARN] `,
+      msg,
       ...args,
     );
   }
 
   protected debug(msg: any, ...args: any[]): void {
     console.debug(
-      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] ${msg}`,
+      `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] `,
+      msg,
       ...args,
     );
   }
@@ -305,6 +332,7 @@ export abstract class ServiceWithOAuth extends Service {
 export type ListService = {
   id: number;
   name: string;
+  logo: string;
   description: string;
   nodes: ListNode[];
 } & ServiceMetadata;

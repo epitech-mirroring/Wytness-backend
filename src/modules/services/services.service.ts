@@ -45,6 +45,7 @@ export class ServicesService {
           ...(service.serviceMetadata || {}),
           id: service.id,
           name: service.name,
+          logo: service.logo,
           description: service.description,
           nodes: service.nodes.map((node) => {
             return {
