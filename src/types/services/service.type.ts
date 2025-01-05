@@ -6,9 +6,18 @@ import { PrismaService } from '../../providers/prisma/prisma.service';
 import { User } from '../user';
 
 export type ServiceMetadata = {
-  useOAuth: boolean;
   useCron: boolean;
+  useAuth: undefined | 'OAuth' | 'code';
 };
+
+export type CodeFormField = {
+  type: 'text' | 'number' | 'email' | 'password';
+  name: string;
+  description: string;
+  placeholder?: string;
+  required?: boolean;
+};
+export type CodeForm = Array<CodeFormField>;
 
 @Injectable()
 export abstract class Service implements OnModuleInit {
@@ -31,7 +40,7 @@ export abstract class Service implements OnModuleInit {
     this.description = description;
     this.nodes = nodes;
     this.serviceMetadata = serviceMetadata || {
-      useOAuth: false,
+      useAuth: undefined,
       useCron: false,
     };
   }
@@ -154,7 +163,22 @@ export const OAuthDefaultConfig: OAuthConfig = {
 };
 
 @Injectable()
-export abstract class ServiceWithOAuth extends Service {
+export abstract class ServiceWithAuth extends Service {
+  protected constructor(
+    name: string,
+    description: string,
+    nodes: Node[],
+    serviceMetadata: ServiceMetadata,
+  ) {
+    console.assert(serviceMetadata.useAuth);
+    super(name, description, nodes, serviceMetadata);
+  }
+
+  public abstract isUserConnected(userId: number): Promise<boolean>;
+}
+
+@Injectable()
+export abstract class ServiceWithOAuth extends ServiceWithAuth {
   endpoints: OAuthEndpoints;
   config: OAuthConfig;
 
@@ -164,11 +188,11 @@ export abstract class ServiceWithOAuth extends Service {
     nodes: Node[],
     endpoint: OAuthEndpoints,
     config: OAuthConfig = OAuthDefaultConfig,
-    serviceMetadata?: Omit<ServiceMetadata, 'useOAuth'>,
+    serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
   ) {
     super(name, description, nodes, {
       ...serviceMetadata,
-      useOAuth: true,
+      useAuth: 'OAuth',
     });
     this.endpoints = endpoint;
     this.config = config;
@@ -318,6 +342,120 @@ export abstract class ServiceWithOAuth extends Service {
       `[${new Date().toISOString()}] [${this.name[0].toUpperCase() + this.name.slice(1)}/DEBUG] ${msg}`,
       ...args,
     );
+  }
+}
+
+@Injectable()
+export abstract class ServiceWithCode extends ServiceWithAuth {
+  protected constructor(
+    name: string,
+    description: string,
+    nodes: Node[],
+    serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
+  ) {
+    super(name, description, nodes, {
+      ...serviceMetadata,
+      useAuth: 'code',
+    });
+  }
+
+  async isUserConnected(userId: number): Promise<boolean> {
+    const result = await this._prismaService.serviceUser.findFirst({
+      where: {
+        userId,
+        serviceId: this.id,
+      },
+    });
+    return !!result;
+  }
+
+  public abstract getForm(): CodeForm;
+
+  public abstract generateCode(userId: number, formData): Promise<number>;
+
+  protected async _generateCode(
+    userId: number,
+    customData?: any,
+  ): Promise<number> {
+    if (await this.isUserConnected(userId)) {
+      throw new Error('User is not connected to this service');
+    }
+    const exist =
+      (
+        await this._prismaService.code.findMany({
+          where: {
+            userId,
+            source: this.getName(),
+          },
+        })
+      ).length > 0;
+
+    if (exist) {
+      throw new Error('User already has a code');
+    }
+
+    const code = Math.floor(100_000 + Math.random() * 999_999);
+    await this._prismaService.code.create({
+      data: {
+        code,
+        userId,
+        source: this.getName(),
+        customData,
+      },
+    });
+    return code;
+  }
+
+  public async getCode(userId: number): Promise<number | undefined> {
+    const code = await this._prismaService.code.findFirst({
+      where: {
+        userId,
+        source: this.getName(),
+      },
+    });
+
+    if (!code) {
+      return undefined;
+    }
+
+    return code.code;
+  }
+
+  public async verifyCode(userId: number, code: number): Promise<boolean> {
+    const exist = await this._prismaService.code.findFirst({
+      where: {
+        userId,
+        source: this.getName(),
+        code,
+      },
+    });
+
+    if (!exist) {
+      return false;
+    }
+
+    const authcode = await this._prismaService.code.delete({
+      where: {
+        id: exist.id,
+      },
+    });
+
+    await this._prismaService.serviceUser.create({
+      data: {
+        customData: authcode.customData,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+        service: {
+          connect: {
+            id: this.id,
+          },
+        },
+      },
+    });
+    return true;
   }
 }
 
