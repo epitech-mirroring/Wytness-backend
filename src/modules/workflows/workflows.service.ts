@@ -195,6 +195,63 @@ export class WorkflowsService implements OnModuleInit {
     });
   }
 
+  public async getWorkflow(workflowId: number): Promise<Workflow | undefined> {
+    return this.workflows.find((workflow) => workflow.id === workflowId);
+  }
+
+  public async deleteWorkflow(workflowId: number): Promise<void> {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return;
+    }
+
+    const dbWorkflow = await this._prismaService.workflow.delete({
+      where: {
+        id: workflowId,
+      },
+    });
+
+    if (!dbWorkflow) {
+      return;
+    }
+
+    this.workflows = this.workflows.filter((workflow) => workflow.id !== workflowId);
+  }
+
+  public async updateWorkflow(
+    workflowId: number,
+    name: string,
+    description: string,
+  ): Promise<void> {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return;
+    }
+
+    const dbWorkflow = await this._prismaService.workflow.update({
+      where: {
+        id: workflowId,
+      },
+      data: {
+        name,
+        description,
+      },
+    });
+
+    if (!dbWorkflow) {
+      return;
+    }
+
+    workflow.name = name;
+    workflow.description = description;
+  }
+
   public async createWorkflow(
     name: string,
     description: string,
@@ -217,6 +274,81 @@ export class WorkflowsService implements OnModuleInit {
 
     workflow.id = dbWorkflow.id;
     this.workflows.push(workflow);
+  }
+
+  public async getNodes(workflowId: number): Promise<WorkflowNode[]> {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return [];
+    }
+
+    return workflow.nodes;
+  }
+
+  public async deleteNode(workflowId: number, nodeId: number): Promise<void> {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return;
+    }
+
+    const node = this.getNode(workflowId, nodeId);
+
+    if (!node) {
+      return;
+    }
+
+    const dbNode = await this._prismaService.workflowNode.delete({
+      where: {
+        id: nodeId,
+      },
+    });
+
+    if (!dbNode) {
+      return;
+    }
+
+    workflow.nodes = workflow.nodes.filter((node) => node.id !== nodeId);
+  }
+
+  public async updateNode(
+    workflowId: number,
+    nodeId: number,
+    config: any,
+  ): Promise<void> {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return;
+    }
+
+    const node = this.getNode(workflowId, nodeId);
+
+    if (!node) {
+      return;
+    }
+
+    const dbNode = await this._prismaService.workflowNode.update({
+      where: {
+        id: nodeId,
+      },
+      data: {
+        config,
+      },
+    });
+
+    if (!dbNode) {
+      return;
+    }
+
+    node.config = config;
   }
 
   public async addNodeToWorkflow(
