@@ -190,10 +190,11 @@ export abstract class ServiceWithAuth extends Service {
     name: string,
     description: string,
     nodes: Node[],
+    logo: string,
     serviceMetadata: ServiceMetadata,
   ) {
     console.assert(serviceMetadata.useAuth);
-    super(name, description, nodes, serviceMetadata);
+    super(name, description, nodes, logo, serviceMetadata);
   }
 
   public abstract isUserConnected(userId: number): Promise<boolean>;
@@ -378,9 +379,10 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     name: string,
     description: string,
     nodes: Node[],
+    logo: string,
     serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
   ) {
-    super(name, description, nodes, {
+    super(name, description, nodes, logo, {
       ...serviceMetadata,
       useAuth: 'code',
     });
