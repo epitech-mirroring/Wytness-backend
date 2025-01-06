@@ -3,7 +3,7 @@ export class WorkflowNode {
   nodeID: number;
   config: any;
 
-  next: WorkflowNode[];
+  next: WorkflowNode[] = [];
 
   constructor(id: number, config: any) {
     this.id = id;
