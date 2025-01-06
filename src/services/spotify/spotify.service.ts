@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { ServiceWithOAuth } from 'src/types/services/service.type';
+import { OAuthDefaultConfig, ServiceWithOAuth } from "src/types/services/service.type";
 import { ConfigService } from '@nestjs/config';
 import { PlayingMusicTrigger } from './nodes/triggers/status/playing.trigger';
 import { PausePlaybackAction } from './nodes/actions/player/pause.action';
@@ -21,12 +21,13 @@ export class SpotifyService extends ServiceWithOAuth {
       'spotify',
       'Spotify - A digital music, podcast, and video streaming service',
       [_playingMusic, _pausePlayback],
-      "https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png",
+      'https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png',
       {
         authorize: 'https://accounts.spotify.com/authorize',
         token: 'https://accounts.spotify.com/api/token',
       },
-      {useCron: true},
+      OAuthDefaultConfig,
+      { useCron: true },
     );
   }
 

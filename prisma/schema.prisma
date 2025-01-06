@@ -23,6 +23,7 @@ model User {
   updatedAt  DateTime      @updatedAt
   services   ServiceUser[]
   workflows  Workflow[]
+  codes      Code[]
 }
 
 model Service {
@@ -46,6 +47,17 @@ model ServiceUser {
   customData Json @default("{}")
 
   @@unique([serviceId, userId])
+}
+
+model Code {
+  id         Int      @id @default(autoincrement())
+  code       Int      @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  source     String
+  customData Json     @default("{}")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
 }
 
 enum NodeType {

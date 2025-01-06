@@ -5,6 +5,9 @@ import {
   Action,
   ListService,
   Service,
+  ServiceMetadata,
+  ServiceWithAuth,
+  ServiceWithCode,
   ServiceWithOAuth,
   Trigger,
 } from '../../types/services';
@@ -19,7 +22,10 @@ export class ServicesService {
     @Inject(forwardRef(() => SpotifyService))
     private _spotifyService: SpotifyService,
   ) {
-    this.services = [this._discordService, this._spotifyService];
+    this.services = [
+      this._discordService,
+      this._spotifyService,
+    ];
   }
 
   public addService(service: Service): void {
@@ -30,12 +36,15 @@ export class ServicesService {
     return this.services.find((service) => service.name === name);
   }
 
-  public doesServiceUseOAuth(serviceName: string): boolean {
+  public doesServiceUseAuth(
+    serviceName: string,
+    type: ServiceMetadata['useAuth'],
+  ): boolean {
     const service = this.getServiceByName(serviceName);
     if (!service) {
       return false;
     }
-    return service.serviceMetadata.useOAuth;
+    return service.serviceMetadata.useAuth === type;
   }
 
   public async listServices(): Promise<ListService[]> {
@@ -45,7 +54,6 @@ export class ServicesService {
           ...(service.serviceMetadata || {}),
           id: service.id,
           name: service.name,
-          logo: service.logo,
           description: service.description,
           nodes: service.nodes.map((node) => {
             return {
@@ -62,14 +70,27 @@ export class ServicesService {
     const connections = [];
 
     for (const service of this.services) {
-      if (service.serviceMetadata.useOAuth) {
-        const oauthService = service as ServiceWithOAuth;
+      if (service.serviceMetadata.useAuth) {
+        const oauthService = service as ServiceWithAuth;
         const connected = await oauthService.isUserConnected(userId);
-        connections.push({
+        const connection = {
           serviceId: service.id,
           connected,
-          url: oauthService.buildOAuthUrl(),
-        });
+          type: service.serviceMetadata.useAuth,
+        };
+        switch (service.serviceMetadata.useAuth) {
+          case 'OAuth':
+            connection['url'] = (service as ServiceWithOAuth).buildOAuthUrl();
+            break;
+          case 'code':
+            connection['url'] = '/services/' + service.id + '/get-code';
+            connection['form'] = (service as ServiceWithCode).getForm();
+            connection['alreadyHasCode'] = !!(await (
+              service as ServiceWithCode
+            ).getCode(userId));
+            break;
+        }
+        connections.push(connection);
       }
     }
 

@@ -12,7 +12,7 @@ import { ServicesService } from './services.service';
 import { Private } from '../auth/decorators/private.decorator';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { AuthContext } from '../auth/auth.context';
-import { ServiceWithOAuth } from '../../types/services';
+import { ServiceWithCode, ServiceWithOAuth } from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
 
@@ -49,14 +49,65 @@ export class ServicesController {
       throw new NotFoundException('Service not found');
     }
 
-    if (!service.serviceMetadata.useOAuth) {
-      throw new BadRequestException('Service does not use OAuth');
+    switch (service.serviceMetadata.useAuth) {
+      case 'OAuth':
+        await (service as ServiceWithOAuth).onOAuthCallback(
+          body,
+          this._authContext.user,
+        );
+        break;
+      case 'code':
+        await (service as ServiceWithCode).verifyCode(
+          this._authContext.user.id,
+          parseInt(body.code),
+        );
+        break;
+      default:
+        throw new BadRequestException(
+          'Service does not use OAuth or code auth',
+        );
+    }
+  }
+
+  @Private()
+  @Post('/:serviceName/connect/form')
+  @ApiParam({
+    name: 'serviceName',
+    description: 'Name of the service',
+    type: 'string',
+  })
+  @ApiBody({
+    description: 'Service connection form data',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service connection form submitted',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Service does not use code auth',
+  })
+  async postAuthForm(
+    @Param('serviceName') serviceName: string,
+    @Body() body: any,
+  ) {
+    const service = this._servicesService.getServiceByName(serviceName);
+    if (!service) {
+      throw new NotFoundException('Service not found');
     }
 
-    await (service as ServiceWithOAuth).onOAuthCallback(
-      body,
-      this._authContext.user,
-    );
+    if (service.serviceMetadata.useAuth !== 'code') {
+      throw new BadRequestException('Service does not use code auth');
+    }
+    try {
+      await (service as ServiceWithCode).generateCode(
+        this._authContext.user.id,
+        body,
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 
   @Private()
@@ -86,7 +137,7 @@ export class ServicesController {
       name: node.getName(),
       description: node.getDescription(),
       type: node.type,
-      fields: node.getFields()
+      fields: node.getFields(),
     }));
     return nodeDTO;
   }
