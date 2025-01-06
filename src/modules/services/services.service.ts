@@ -1,7 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DiscordService } from '../../services/discord/discord.service';
 import { SpotifyService } from 'src/services/spotify/spotify.service';
-import { SlackServices } from '../../services/slack/slack.services';
 import {
   Action,
   ListService,
@@ -22,13 +21,10 @@ export class ServicesService {
     private _discordService: DiscordService,
     @Inject(forwardRef(() => SpotifyService))
     private _spotifyService: SpotifyService,
-    @Inject(forwardRef(() => SlackServices))
-    private _slackService: SlackServices,
   ) {
     this.services = [
       this._discordService,
       this._spotifyService,
-      this._slackService,
     ];
   }
 
@@ -58,7 +54,6 @@ export class ServicesService {
           ...(service.serviceMetadata || {}),
           id: service.id,
           name: service.name,
-          logo: service.logo,
           description: service.description,
           nodes: service.nodes.map((node) => {
             return {
