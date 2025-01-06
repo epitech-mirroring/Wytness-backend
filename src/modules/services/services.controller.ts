@@ -16,6 +16,7 @@ import { ServiceWithCode, ServiceWithOAuth } from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
 
+@ApiTags('services')
 @Controller('services')
 export class ServicesController {
   @Inject()
@@ -70,6 +71,23 @@ export class ServicesController {
 
   @Private()
   @Post('/:serviceName/connect/form')
+  @ApiParam({
+    name: 'serviceName',
+    description: 'Name of the service',
+    type: 'string',
+  })
+  @ApiBody({
+    description: 'Service connection form data',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service connection form submitted',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Service does not use code auth',
+  })
   async postAuthForm(
     @Param('serviceName') serviceName: string,
     @Body() body: any,
