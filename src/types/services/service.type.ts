@@ -6,9 +6,18 @@ import { PrismaService } from '../../providers/prisma/prisma.service';
 import { User } from '../user';
 
 export type ServiceMetadata = {
-  useOAuth: boolean;
   useCron: boolean;
+  useAuth: undefined | 'OAuth' | 'code';
 };
+
+export type CodeFormField = {
+  type: 'text' | 'number' | 'email' | 'password';
+  name: string;
+  description: string;
+  placeholder?: string;
+  required?: boolean;
+};
+export type CodeForm = Array<CodeFormField>;
 
 @Injectable()
 export abstract class Service implements OnModuleInit {
@@ -33,7 +42,7 @@ export abstract class Service implements OnModuleInit {
     this.description = description;
     this.nodes = nodes;
     this.serviceMetadata = serviceMetadata || {
-      useOAuth: false,
+      useAuth: undefined,
       useCron: false,
     };
     this.logo = logo;
@@ -165,9 +174,35 @@ export type OAuthEndpoints = {
   token: string;
 };
 
+export type OAuthConfig = {
+  clientId: string;
+  scopes: string;
+};
+
+export const OAuthDefaultConfig: OAuthConfig = {
+  clientId: 'client_id',
+  scopes: 'scopes',
+};
+
 @Injectable()
-export abstract class ServiceWithOAuth extends Service {
+export abstract class ServiceWithAuth extends Service {
+  protected constructor(
+    name: string,
+    description: string,
+    nodes: Node[],
+    serviceMetadata: ServiceMetadata,
+  ) {
+    console.assert(serviceMetadata.useAuth);
+    super(name, description, nodes, serviceMetadata);
+  }
+
+  public abstract isUserConnected(userId: number): Promise<boolean>;
+}
+
+@Injectable()
+export abstract class ServiceWithOAuth extends ServiceWithAuth {
   endpoints: OAuthEndpoints;
+  config: OAuthConfig;
 
   protected constructor(
     name: string,
@@ -175,39 +210,53 @@ export abstract class ServiceWithOAuth extends Service {
     nodes: Node[],
     logo: string,
     endpoint: OAuthEndpoints,
-    serviceMetadata?: Omit<ServiceMetadata, 'useOAuth'>,
+    config: OAuthConfig = OAuthDefaultConfig,
+    serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
   ) {
     super(name, description, nodes, logo, {
       ...serviceMetadata,
-      useOAuth: true,
+      useAuth: 'OAuth',
     });
     this.endpoints = endpoint;
+    this.config = config;
   }
 
   public getEndpoints(): OAuthEndpoints {
     return this.endpoints;
   }
 
+  public parseTokenResponse(data: any): any {
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenType: data.token_type,
+      scope: data.scope,
+      expiresIn: data.expires_in,
+    };
+  }
+
   public async onOAuthCallback(
     { code }: ServiceConnectDTO,
     user: User,
   ): Promise<void> {
+    const bodyContent: any = {};
+    bodyContent[this.config.clientId] = this.getClientId();
+    bodyContent['client_secret'] = this.getClientSecret();
+    bodyContent['code'] = code;
+    bodyContent['grant_type'] = 'authorization_code';
+    bodyContent['redirect_uri'] = this.getRedirectUri();
+    bodyContent[this.config.scopes] = this.getScopes().join(' ');
+
     const result = await fetch(this.endpoints.token, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        client_id: this.getClientId(),
-        client_secret: this.getClientSecret(),
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: this.getRedirectUri(),
-        scope: this.getScopes().join(' '),
-      }).toString(),
+      body: new URLSearchParams(bodyContent).toString(),
     });
 
     if (!result.ok) {
+      this.error('Failed to fetch token', await result.text());
       throw new Error('Failed to fetch token');
     }
 
@@ -220,13 +269,7 @@ export abstract class ServiceWithOAuth extends Service {
             id: user.id,
           },
         },
-        customData: {
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token,
-          tokenType: data.token_type,
-          scope: data.scope,
-          expiresIn: data.expires_in,
-        },
+        customData: this.parseTokenResponse(data),
         service: {
           connect: {
             name: this.getName(),
@@ -237,7 +280,7 @@ export abstract class ServiceWithOAuth extends Service {
   }
 
   public buildOAuthUrl(): string {
-    return `${this.endpoints.authorize}?client_id=${this.getClientId()}&redirect_uri=${this.getRedirectUri()}&response_type=code&scope=${this.getScopes().join(' ')}`;
+    return `${this.endpoints.authorize}?${this.config.clientId}=${this.getClientId()}&redirect_uri=${this.getRedirectUri()}&response_type=code&${this.config.scopes}=${this.getScopes().join(' ')}`;
   }
 
   public afterLogin(): void {}
@@ -326,6 +369,120 @@ export abstract class ServiceWithOAuth extends Service {
       msg,
       ...args,
     );
+  }
+}
+
+@Injectable()
+export abstract class ServiceWithCode extends ServiceWithAuth {
+  protected constructor(
+    name: string,
+    description: string,
+    nodes: Node[],
+    serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
+  ) {
+    super(name, description, nodes, {
+      ...serviceMetadata,
+      useAuth: 'code',
+    });
+  }
+
+  async isUserConnected(userId: number): Promise<boolean> {
+    const result = await this._prismaService.serviceUser.findFirst({
+      where: {
+        userId,
+        serviceId: this.id,
+      },
+    });
+    return !!result;
+  }
+
+  public abstract getForm(): CodeForm;
+
+  public abstract generateCode(userId: number, formData): Promise<number>;
+
+  protected async _generateCode(
+    userId: number,
+    customData?: any,
+  ): Promise<number> {
+    if (await this.isUserConnected(userId)) {
+      throw new Error('User is not connected to this service');
+    }
+    const exist =
+      (
+        await this._prismaService.code.findMany({
+          where: {
+            userId,
+            source: this.getName(),
+          },
+        })
+      ).length > 0;
+
+    if (exist) {
+      throw new Error('User already has a code');
+    }
+
+    const code = Math.floor(100_000 + Math.random() * 999_999);
+    await this._prismaService.code.create({
+      data: {
+        code,
+        userId,
+        source: this.getName(),
+        customData,
+      },
+    });
+    return code;
+  }
+
+  public async getCode(userId: number): Promise<number | undefined> {
+    const code = await this._prismaService.code.findFirst({
+      where: {
+        userId,
+        source: this.getName(),
+      },
+    });
+
+    if (!code) {
+      return undefined;
+    }
+
+    return code.code;
+  }
+
+  public async verifyCode(userId: number, code: number): Promise<boolean> {
+    const exist = await this._prismaService.code.findFirst({
+      where: {
+        userId,
+        source: this.getName(),
+        code,
+      },
+    });
+
+    if (!exist) {
+      return false;
+    }
+
+    const authcode = await this._prismaService.code.delete({
+      where: {
+        id: exist.id,
+      },
+    });
+
+    await this._prismaService.serviceUser.create({
+      data: {
+        customData: authcode.customData,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+        service: {
+          connect: {
+            id: this.id,
+          },
+        },
+      },
+    });
+    return true;
   }
 }
 

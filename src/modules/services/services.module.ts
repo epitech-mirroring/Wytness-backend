@@ -5,6 +5,7 @@ import { PrismaModule } from '../../providers/prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { DiscordModule } from '../../services/discord/discord.module';
 import { SpotifyModule } from '../../services/spotify/spotify.module';
+import {SlackModules} from "../../services/slack/slack.modules";
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { SpotifyModule } from '../../services/spotify/spotify.module';
     AuthModule,
     forwardRef(() => DiscordModule),
     forwardRef(() => SpotifyModule),
+    forwardRef(() => SlackModules)
   ],
   providers: [ServicesService],
   controllers: [ServicesController],

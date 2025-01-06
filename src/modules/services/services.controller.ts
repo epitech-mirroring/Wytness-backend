@@ -49,7 +49,7 @@ export class ServicesController {
       throw new NotFoundException('Service not found');
     }
 
-    if (!service.serviceMetadata.useOAuth) {
+    if (!service.serviceMetadata.useAuth['oauth']) {
       throw new BadRequestException('Service does not use OAuth');
     }
 
