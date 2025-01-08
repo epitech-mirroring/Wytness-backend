@@ -199,7 +199,23 @@ export type DiscordGuildMember = {
   avatar_decoration_data?: DiscordAvatarDecoration;
 };
 
-export type DiscordRole = {};
+export type DiscordRole = {
+  id: DiscordSnowflake;
+  name: string;
+  color: number;
+  hoist: boolean;
+  icon?: string;
+  unicode_emoji?: string;
+  position: number;
+  permissions: string;
+  managed: boolean;
+  mentionable: boolean;
+  tags?: {
+    bot_id?: DiscordSnowflake;
+    integration_id?: DiscordSnowflake;
+    premium_subscriber?: null;
+  };
+};
 
 export type DiscordChannelMention = {
   id: DiscordSnowflake;
@@ -273,11 +289,24 @@ export type DiscordApplication = {
   guild?: Partial<DiscordGuild>;
 };
 
-export type DiscordMessageReference = {};
+export type DiscordMessageReference = {
+  message_id?: DiscordSnowflake;
+  channel_id?: DiscordSnowflake;
+  guild_id?: DiscordSnowflake;
+  fail_if_not_exists?: boolean;
+};
 
-export type DiscordMessageSnapshot = {};
+export type DiscordMessageSnapshot = {
+  timestamp: string;
+  data: Partial<DiscordMessage>;
+};
 
-export type DiscordMessageInteraction = {};
+export type DiscordMessageInteraction = {
+  id: DiscordSnowflake;
+  type: number;
+  name: string;
+  user: DiscordUser;
+};
 
 export type DiscordChannel = {
   id: DiscordSnowflake;
@@ -317,19 +346,56 @@ export type DiscordChannel = {
   default_forum_layout?: number;
 };
 
-export type DiscordMessageComponent = {};
+export type DiscordMessageComponent = {
+  type: number;
+  components?: DiscordMessageComponent[];
+};
 
-export type DiscordMessageStickerItem = {};
+export type DiscordMessageStickerItem = {
+  id: DiscordSnowflake;
+  name: string;
+  format_type: number;
+};
 
-export type DiscordSticker = {};
+export type DiscordSticker = {
+  id: DiscordSnowflake;
+  pack_id?: DiscordSnowflake;
+  name: string;
+  description?: string;
+  tags: string;
+  type: number;
+  format_type: number;
+  available?: boolean;
+  guild_id?: DiscordSnowflake;
+  user?: DiscordUser;
+  sort_value?: number;
+};
 
-export type DiscordRoleSubscription = {};
+export type DiscordRoleSubscription = {
+  role_subscription_id: DiscordSnowflake;
+  tier_name: string;
+  renewal_cycle: number;
+};
 
-export type DiscordResolved = {};
+export type DiscordResolved = {
+  users?: Record<DiscordSnowflake, DiscordUser>;
+  members?: Record<DiscordSnowflake, DiscordGuildMember>;
+  roles?: Record<DiscordSnowflake, DiscordRole>;
+  channels?: Record<DiscordSnowflake, DiscordChannel>;
+  messages?: Record<DiscordSnowflake, DiscordMessage>;
+};
 
-export type DiscordPoll = {};
+export type DiscordPoll = {
+  id: DiscordSnowflake;
+  question: string;
+  options: string[];
+  votes: Record<DiscordSnowflake, number>;
+};
 
-export type DiscordMessageCall = {};
+export type DiscordMessageCall = {
+  participants: DiscordSnowflake[];
+  ended_timestamp?: string;
+};
 
 export type DiscordMessage = {
   id: DiscordSnowflake;
@@ -337,12 +403,12 @@ export type DiscordMessage = {
   author: DiscordUser;
   content: string;
   timestamp: string;
-  edited_timestamp: string;
+  edited_timestamp?: string;
   tts: boolean;
   mention_everyone: boolean;
   mentions: DiscordUser[];
   mention_roles: DiscordRole[];
-  mention_channels: DiscordChannelMention[];
+  mention_channels?: DiscordChannelMention[];
   attachments: DiscordAttachment[];
   embeds: DiscordEmbed[];
   reactions?: DiscordReaction[];
