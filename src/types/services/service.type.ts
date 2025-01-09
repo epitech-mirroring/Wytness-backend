@@ -238,7 +238,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
 
   public async onOAuthCallback(
     { code }: ServiceConnectDTO,
-    user: User,
+    user: Omit<User, 'actions'>,
   ): Promise<void> {
     const bodyContent: any = {};
     bodyContent[this.config.clientId] = this.getClientId();

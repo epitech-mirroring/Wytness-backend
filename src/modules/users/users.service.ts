@@ -1,10 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../providers/prisma/prisma.service';
 import { User } from '../../types/user';
+import { PermissionsService } from '../permissions/permissions.service';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
+  @Inject()
+  private _permissionsService: PermissionsService;
+
   constructor(private prisma: PrismaService) {}
+
+  async onModuleInit() {
+    const globalPolicy = await this._permissionsService.createPolicy('User');
+
+    await this._permissionsService.addRuleToPolicy<User>(
+      globalPolicy,
+      'read',
+      User,
+      (user, targetUser) => user.id === targetUser?.id,
+      'allow',
+    );
+  }
 
   async getAllUsers() {
     return this.prisma.user.findMany();
@@ -22,9 +38,24 @@ export class UsersService {
     });
   }
 
-  async getUserByEmail(email: string) {
-    return this.prisma.user.findUnique({
+  async getUserByEmail(email: string, performer: Omit<User, 'actions'>) {
+    const userId = await this.prisma.user.findUnique({
       where: { email },
+      select: { id: true },
+    });
+
+    if (
+      !(await this._permissionsService.canUserPerformAction(
+        performer,
+        'read',
+        userId.id,
+        User,
+      ))
+    ) {
+      return null;
+    }
+    return this.prisma.user.findUnique({
+      where: { id: userId.id },
     });
   }
 

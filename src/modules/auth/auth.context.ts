@@ -7,13 +7,13 @@ import { User } from '../../types/user';
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthContext {
-  private _user: User | undefined = undefined;
+  private _user: Omit<User, 'actions'> | undefined = undefined;
 
-  public set user(user: User | undefined) {
+  public set user(user: Omit<User, 'actions'> | undefined) {
     this._user = user;
   }
 
-  public get user(): User {
+  public get user(): Omit<User, 'actions'> {
     if (!this._user) {
       throw new InternalServerErrorException('User not authenticated');
     }
