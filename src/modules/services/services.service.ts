@@ -22,10 +22,7 @@ export class ServicesService {
     @Inject(forwardRef(() => SpotifyService))
     private _spotifyService: SpotifyService,
   ) {
-    this.services = [
-      this._discordService,
-      this._spotifyService,
-    ];
+    this.services = [this._discordService, this._spotifyService];
   }
 
   public addService(service: Service): void {

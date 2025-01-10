@@ -1,4 +1,4 @@
-import { Field } from "src/types/services/field.type";
+import { Field } from 'src/types/services/field.type';
 
 export class NodeDTO {
   id: number;

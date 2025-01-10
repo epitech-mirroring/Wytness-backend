@@ -1,40 +1,54 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../../providers/prisma/prisma.service';
-import { Workflow, WorkflowNode } from '../../types/workflow';
+import {
+  Workflow,
+  WorkflowExecution,
+  WorkflowExecutionTrace,
+  WorkflowNode,
+} from '../../types/workflow';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
+import { Repository } from 'typeorm';
+import { NodeType, Trigger } from '../../types/services';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
-  @Inject(PrismaService)
-  private _prismaService: PrismaService;
-
   @Inject(ServicesService)
   private _servicesService: ServicesService;
 
   @Inject(UsersService)
   private _usersService: UsersService;
 
+  @Inject('WORKFLOW_REPOSITORY')
+  private _workflowRepository: Repository<Workflow>;
+
+  @Inject('WORKFLOW_NODE_REPOSITORY')
+  private _workflowNodeRepository: Repository<WorkflowNode>;
+
+  @Inject('WORKFLOW_EXECUTION_REPOSITORY')
+  private _workflowExecutionRepository: Repository<WorkflowExecution>;
+
+  @Inject('WORKFLOW_EXECUTION_TRACE_REPOSITORY')
+  private _workflowExecutionTraceRepository: Repository<WorkflowExecutionTrace>;
+
   workflows: Workflow[] = [];
 
   private async recursiveEntrypointSetup(
     initial: WorkflowNode,
   ): Promise<WorkflowNode> {
-    const next = await this._prismaService.workflowNode.findMany({
+    const next = await this._workflowNodeRepository.find({
       where: {
-        previousNodes: {
-          some: {
-            id: initial.id,
-          },
+        previous: {
+          id: initial.id,
         },
       },
+      relations: ['node'],
     });
 
     const nexts = [];
 
     for (const node of next) {
       let nextNode = new WorkflowNode(node.id, node.config);
-      nextNode.nodeID = node.nodeId;
+      nextNode.node = node.node;
       nextNode = await this.recursiveEntrypointSetup(nextNode);
       nexts.push(nextNode);
     }
@@ -44,28 +58,21 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    const dbWorkflows = await this._prismaService.workflow.findMany({
-      include: {
-        nodes: {
-          include: {
-            previousNodes: true,
-            node: true,
-          },
-        },
-      },
+    const dbWorkflows = await this._workflowRepository.find({
+      relations: ['owner', 'nodes', 'nodes.node'],
     });
 
     for (const dbWorkflow of dbWorkflows) {
       const workflow = new Workflow(dbWorkflow.name, dbWorkflow.description);
       workflow.id = dbWorkflow.id;
-      workflow.owner = dbWorkflow.ownerId;
+      workflow.owner = dbWorkflow.owner;
 
       for (const node of dbWorkflow.nodes) {
-        if (node.previousNodes.length > 0 || node.node.type === 'ACTION') {
+        if (node.node.type === NodeType.ACTION) {
           continue;
         }
         let entrypoint = new WorkflowNode(node.id, node.config);
-        entrypoint.nodeID = node.nodeId;
+        entrypoint.node = node.node;
 
         entrypoint = await this.recursiveEntrypointSetup(entrypoint);
 
@@ -87,37 +94,56 @@ export class WorkflowsService implements OnModuleInit {
 
     setInterval(async () => {
       for (const workflow of this.workflows) {
-        const owner = await this._usersService.getUserById(workflow.owner);
         for (const entrypoint of workflow.entrypoints) {
-          const triggerNode = this._servicesService.getTrigger(
-            entrypoint.nodeID,
-          );
+          const triggerNode = entrypoint.node as Trigger;
           if (!triggerNode) {
             continue;
           }
           const service = this._servicesService.getServiceFromNode(
-            entrypoint.nodeID,
+            triggerNode.id,
           );
           if (!service || !service.needCron()) {
             continue;
           }
 
-          const shouldRun = await triggerNode.isTriggered(owner, entrypoint.config);
+          const shouldRun = await triggerNode.isTriggered(
+            workflow.owner,
+            entrypoint.config,
+          );
 
           if (shouldRun) {
+            const execution = new WorkflowExecution(workflow);
             await triggerNode._run(
               {},
               {
                 ...entrypoint.config,
-                user: owner,
+                user: workflow.owner,
                 _workflowId: workflow.id,
-                _next: entrypoint.next.map((node) => node.id),
+                _next: entrypoint.next.map((node) => node.id) || [],
               },
+              execution,
+              null,
             );
+            await this.saveExecution(execution);
           }
         }
       }
     }, 1000);
+  }
+
+  private async saveExecution(execution: WorkflowExecution) {
+    const trace = execution.trace;
+    const recursiveSave = async (node: WorkflowExecutionTrace) => {
+      const saved = await this._workflowExecutionTraceRepository.insert(node);
+      for (const next of node.next || []) {
+        await recursiveSave(next);
+      }
+      return saved;
+    };
+    const r = await recursiveSave(trace);
+    execution.firstTraceId = r.identifiers[0].id;
+    const e = this._workflowExecutionRepository.create(execution);
+    await this._workflowExecutionRepository.insert(e);
   }
 
   public getWorkflowByName(name: string): Workflow | undefined {
@@ -125,7 +151,7 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public listWorkflows(userId: number): Workflow[] {
-    return this.workflows.filter((workflow) => workflow.owner === userId);
+    return this.workflows.filter((workflow) => workflow.owner.id === userId);
   }
 
   private recursiveFindNode(
@@ -162,7 +188,12 @@ export class WorkflowsService implements OnModuleInit {
     }
   }
 
-  public async runNode(nodeId: number, data: any) {
+  public async runNode(
+    nodeId: number,
+    data: any,
+    execution: WorkflowExecution,
+    parentTraceUUID: string | null,
+  ) {
     const workflow = this.workflows.find(
       (workflow) =>
         workflow.entrypoints.some((node) => node.id === nodeId) ||
@@ -174,25 +205,29 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const node = this.getNode(workflow.id, nodeId);
-    if (!node) {
+    const workflowNode = this.getNode(workflow.id, nodeId);
+    if (!workflowNode) {
       console.error('No node found for id', nodeId);
       return;
     }
 
-    const owner = await this._usersService.getUserById(workflow.owner);
-
-    const action = this._servicesService.getNode(node.nodeID);
+    const action = this._servicesService.getNode(workflowNode.node.id);
 
     if (!action) {
-      console.error('No action found for node', node.nodeID);
+      console.error('No action found for node', workflowNode.node.id);
       return;
     }
-    return action._run(data, {
-      user: owner,
-      _workflowId: workflow.id,
-      _next: node.next.map((node) => node.id),
-    });
+    return action._run(
+      data,
+      {
+        user: workflow.owner,
+        _workflowId: workflow.id,
+        _next: workflowNode.next.map((node) => node.id) || [],
+        ...workflowNode.config,
+      },
+      execution,
+      parentTraceUUID,
+    );
   }
 
   public async getWorkflow(workflowId: number): Promise<Workflow | undefined> {
@@ -208,23 +243,22 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const dbWorkflow = await this._prismaService.workflow.delete({
-      where: {
-        id: workflowId,
-      },
+    const dbWorkflow = await this._workflowRepository.delete({
+      id: workflowId,
     });
 
     if (!dbWorkflow) {
       return;
     }
 
-    this.workflows = this.workflows.filter((workflow) => workflow.id !== workflowId);
+    this.workflows = this.workflows.filter(
+      (workflow) => workflow.id !== workflowId,
+    );
   }
 
   public async updateWorkflow(
     workflowId: number,
-    name: string,
-    description: string,
+    data: Partial<Omit<Workflow, 'id'>>,
   ): Promise<void> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -234,22 +268,19 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const dbWorkflow = await this._prismaService.workflow.update({
-      where: {
+    const dbWorkflow = await this._workflowRepository.update(
+      {
         id: workflowId,
       },
-      data: {
-        name,
-        description,
-      },
-    });
+      data,
+    );
 
     if (!dbWorkflow) {
       return;
     }
 
-    workflow.name = name;
-    workflow.description = description;
+    workflow.name = data.name || workflow.name;
+    workflow.description = data.description || workflow.description;
   }
 
   public async createWorkflow(
@@ -258,14 +289,20 @@ export class WorkflowsService implements OnModuleInit {
     userId: number,
   ): Promise<void> {
     const workflow = new Workflow(name, description);
-    workflow.owner = userId;
 
-    const dbWorkflow = await this._prismaService.workflow.create({
-      data: {
+    const workflowId = (
+      await this._workflowRepository.save({
         name,
         description,
-        ownerId: userId,
-      },
+        owner: {
+          id: userId,
+        },
+      })
+    ).id;
+
+    const dbWorkflow = await this._workflowRepository.findOne({
+      where: { id: workflowId },
+      relations: ['owner'],
     });
 
     if (!dbWorkflow) {
@@ -273,6 +310,7 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     workflow.id = dbWorkflow.id;
+    workflow.owner = dbWorkflow.owner;
     this.workflows.push(workflow);
   }
 
@@ -303,10 +341,8 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const dbNode = await this._prismaService.workflowNode.delete({
-      where: {
-        id: nodeId,
-      },
+    const dbNode = await this._workflowNodeRepository.delete({
+      id: nodeId,
     });
 
     if (!dbNode) {
@@ -335,14 +371,14 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const dbNode = await this._prismaService.workflowNode.update({
-      where: {
+    const dbNode = await this._workflowNodeRepository.update(
+      {
         id: nodeId,
       },
-      data: {
+      {
         config,
       },
-    });
+    );
 
     if (!dbNode) {
       return;
@@ -371,17 +407,11 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const dbNode = await this._prismaService.workflowNode.create({
-      data: {
-        nodeId,
-        workflowId,
-        previousNodes: {
-          connect: {
-            id: previousNodeId,
-          },
-        },
-        config,
+    const dbNode = await this._workflowNodeRepository.save({
+      node: {
+        id: nodeId,
       },
+      config,
     });
 
     if (!dbNode) {
@@ -389,7 +419,7 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     const node = new WorkflowNode(dbNode.id, config);
-    node.nodeID = dbNode.nodeId;
+    node.node = this._servicesService.getNode(nodeId);
     previousNode.addNext(node);
     workflow.addNode(node);
   }
@@ -407,12 +437,11 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
-    const dbNode = await this._prismaService.workflowNode.create({
-      data: {
-        nodeId,
-        workflowId,
-        config,
+    const dbNode = await this._workflowNodeRepository.save({
+      node: {
+        id: nodeId,
       },
+      config,
     });
 
     if (!dbNode) {
@@ -424,14 +453,25 @@ export class WorkflowsService implements OnModuleInit {
     workflow.addEntrypoint(node);
   }
 
-  public async findAndTrigger(
-    data: any,
-    predicate: (node: WorkflowNode) => boolean,
-  ) {
+  public async findAndTriggerGlobal(data: any, nodeID: number) {
     for (const workflow of this.workflows) {
       for (const node of workflow.entrypoints) {
-        if (predicate(node)) {
-          await this.runNode(node.id, data);
+        if (node.node.id === nodeID) {
+          const triggerNode = this._servicesService.getTrigger(nodeID);
+          if (!triggerNode) {
+            continue;
+          }
+          const shouldRun = await triggerNode.isTriggered(
+            workflow.owner,
+            node.config,
+            data,
+          );
+          if (!shouldRun) {
+            continue;
+          }
+          const execution = new WorkflowExecution(workflow);
+          await this.runNode(node.id, data, execution, null);
+          await this.saveExecution(execution);
         }
       }
     }

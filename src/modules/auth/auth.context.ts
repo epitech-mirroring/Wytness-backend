@@ -1,19 +1,17 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Scope,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { User } from '../../types/user';
+import { RequestScope } from 'nj-request-scope';
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
+@RequestScope()
 export class AuthContext {
-  private _user: Omit<User, 'actions'> | undefined = undefined;
+  private _user: User | undefined = undefined;
 
-  public set user(user: Omit<User, 'actions'> | undefined) {
+  public set user(user: User | undefined) {
     this._user = user;
   }
 
-  public get user(): Omit<User, 'actions'> {
+  public get user(): User {
     if (!this._user) {
       throw new InternalServerErrorException('User not authenticated');
     }

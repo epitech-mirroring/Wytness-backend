@@ -3,6 +3,7 @@ import { DiscordSnowflake } from '../../../discord.type';
 import { ConfigService } from '@nestjs/config';
 import { Action } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
+import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 
 @Injectable()
 export class DirectMessageSendAction extends Action {
@@ -16,11 +17,16 @@ export class DirectMessageSendAction extends Action {
     super('Direct Message Send Action', 'Send a direct message to a user');
   }
 
-  async execute(data: {
-    channel_id: DiscordSnowflake;
-    content: string;
-  }): Promise<void> {
-    await fetch(
+  async execute(
+    data: {
+      channel_id: DiscordSnowflake;
+      content: string;
+    },
+    _config: any,
+    trace: WorkflowExecutionTrace,
+  ): Promise<void> {
+    await this.fetch(
+      trace,
       `https://discord.com/api/v9/channels/${data.channel_id}/messages`,
       {
         method: 'POST',

@@ -2,13 +2,24 @@ import { ListNode, Node } from './node.type';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Trigger } from './trigger.type';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
-import { PrismaService } from '../../providers/prisma/prisma.service';
 import { User } from '../user';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Repository,
+} from 'typeorm';
+import { Code } from './code.type';
+import { ServiceUser } from './connection.type';
 
-export type ServiceMetadata = {
+export class ServiceMetadata {
+  @Column('boolean')
   useCron: boolean;
+  @Column('text', { nullable: true })
   useAuth: undefined | 'OAuth' | 'code';
-};
+}
 
 export type CodeFormField = {
   type: 'text' | 'number' | 'email' | 'password';
@@ -20,23 +31,31 @@ export type CodeFormField = {
 export type CodeForm = Array<CodeFormField>;
 
 @Injectable()
+@Entity('services')
 export abstract class Service implements OnModuleInit {
+  @PrimaryGeneratedColumn()
   id: number;
+  @Column({ unique: true })
   name: string;
+  @Column('text')
   description: string;
+  @Column('text')
   logo: string;
+  @JoinColumn()
+  @OneToMany(() => Node, (node) => node.service)
   nodes: Node[];
+  @Column(() => ServiceMetadata)
   serviceMetadata: ServiceMetadata;
-
-  @Inject()
-  protected _prismaService: PrismaService;
 
   protected constructor(
     name: string,
     description: string,
     nodes: Node[],
     logo: string,
-    serviceMetadata?: ServiceMetadata,
+    serviceMetadata: ServiceMetadata = {
+      useAuth: undefined,
+      useCron: false,
+    },
   ) {
     this.name = name;
     this.description = description;
@@ -48,68 +67,46 @@ export abstract class Service implements OnModuleInit {
     this.logo = logo;
   }
 
+  @Inject('SERVICE_REPOSITORY')
+  private _serviceRepository: Repository<Service>;
+
+  @Inject('SERVICE_NODE_REPOSITORY')
+  private _nodeRepository: Repository<Node>;
+
   async onModuleInit(): Promise<void> {
-    let service = await this._prismaService.service.findUnique({
-      where: { name: this.name },
-      include: {
-        nodes: true,
+    let service = await this._serviceRepository.findOne({
+      where: {
+        name: this.name,
       },
+      relations: ['nodes'],
     });
 
     if (service === null) {
-      await this._prismaService.service.create({
-        data: {
-          name: this.name,
-          description: this.description,
-          logo: this.logo,
-          nodes: {
-            create: this.nodes.map((node) => ({
-              name: node.getName(),
-              type: node.type === 'trigger' ? 'TRIGGER' : 'ACTION',
-              fields: {
-                create: node.getFields().map((field) => ({
-                  name: field.name,
-                  title: field.title,
-                  description: field.description,
-                  type: field.type,
-                  nullable: field.nullable,
-                })),
-              },
-            })),
-          },
-        },
+      await this._serviceRepository.save({
+        name: this.name,
+        description: this.description,
+        logo: this.logo,
+        serviceMetadata: this.serviceMetadata,
       });
 
-      service = await this._prismaService.service.findUnique({
-        where: { name: this.name },
-        include: {
-          nodes: true,
+      service = await this._serviceRepository.findOne({
+        where: {
+          name: this.name,
         },
+        relations: ['nodes'],
       });
     }
 
     // Check if there is a mismatch between the nodes in the database and the nodes in the service
     for (const node of this.nodes) {
-      const dbNode = service.nodes.find((n) => n.name === node.getName());
+      const dbNode = service.nodes.find((n) => n.getName() === node.getName());
       if (!dbNode) {
-        const result = await this._prismaService.node.create({
-          data: {
-            name: node.getName(),
-            type: node.type === 'trigger' ? 'TRIGGER' : 'ACTION',
-            fields: {
-              create: node.getFields().map((field) => ({
-                name: field.name,
-                title: field.title,
-                description: field.description,
-                type: field.type,
-                nullable: field.nullable,
-              })),
-            },
-            service: {
-              connect: {
-                name: this.name,
-              },
-            },
+        const result = await this._nodeRepository.save({
+          name: node.getName(),
+          description: node.getDescription(),
+          type: node.type,
+          service: {
+            id: service.id,
           },
         });
         node.id = result.id;
@@ -121,10 +118,8 @@ export abstract class Service implements OnModuleInit {
     for (const node of service.nodes) {
       const localNode = this.nodes.find((n) => n.getName() === node.name);
       if (!localNode) {
-        await this._prismaService.node.delete({
-          where: {
-            id: node.id,
-          },
+        await this._nodeRepository.delete({
+          id: node.id,
         });
         continue;
       }
@@ -197,6 +192,9 @@ export abstract class ServiceWithAuth extends Service {
     super(name, description, nodes, logo, serviceMetadata);
   }
 
+  @Inject('SERVICE_USER_REPOSITORY')
+  protected _serviceUserRepository: Repository<ServiceUser>;
+
   public abstract isUserConnected(userId: number): Promise<boolean>;
 }
 
@@ -212,7 +210,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     logo: string,
     endpoint: OAuthEndpoints,
     config: OAuthConfig = OAuthDefaultConfig,
-    serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
+    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = { useCron: false },
   ) {
     super(name, description, nodes, logo, {
       ...serviceMetadata,
@@ -238,7 +236,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
 
   public async onOAuthCallback(
     { code }: ServiceConnectDTO,
-    user: Omit<User, 'actions'>,
+    user: User,
   ): Promise<void> {
     const bodyContent: any = {};
     bodyContent[this.config.clientId] = this.getClientId();
@@ -263,19 +261,13 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
 
     const data = await result.json();
 
-    await this._prismaService.serviceUser.create({
-      data: {
-        user: {
-          connect: {
-            id: user.id,
-          },
-        },
-        customData: this.parseTokenResponse(data),
-        service: {
-          connect: {
-            name: this.getName(),
-          },
-        },
+    await this._serviceUserRepository.save({
+      user: {
+        id: user.id,
+      },
+      customData: this.parseTokenResponse(data),
+      service: {
+        name: this.getName(),
       },
     });
   }
@@ -287,11 +279,13 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
   public afterLogin(): void {}
 
   public async isUserConnected(userId: number): Promise<boolean> {
-    return !!(await this._prismaService.serviceUser.findUnique({
+    return !!(await this._serviceUserRepository.findOne({
       where: {
-        serviceId_userId: {
-          userId,
-          serviceId: this.id,
+        user: {
+          id: userId,
+        },
+        service: {
+          name: this.getName(),
         },
       },
     }));
@@ -302,11 +296,13 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     url: string,
     options: RequestInit = {},
   ): Promise<Response> {
-    const serviceUser = await this._prismaService.serviceUser.findUnique({
+    const serviceUser = await this._serviceUserRepository.findOne({
       where: {
-        serviceId_userId: {
-          userId: user.id,
-          serviceId: this.id,
+        user: {
+          id: user.id,
+        },
+        service: {
+          name: this.getName(),
         },
       },
     });
@@ -380,7 +376,7 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     description: string,
     nodes: Node[],
     logo: string,
-    serviceMetadata?: Omit<ServiceMetadata, 'useAuth'>,
+    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = { useCron: false },
   ) {
     super(name, description, nodes, logo, {
       ...serviceMetadata,
@@ -388,19 +384,25 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     });
   }
 
+  @Inject('CODE_REPOSITORY')
+  private _codeRepository: Repository<Code>;
+
   async isUserConnected(userId: number): Promise<boolean> {
-    const result = await this._prismaService.serviceUser.findFirst({
+    return !!(await this._serviceUserRepository.findOne({
       where: {
-        userId,
-        serviceId: this.id,
+        user: {
+          id: userId,
+        },
+        service: {
+          name: this.getName(),
+        },
       },
-    });
-    return !!result;
+    }));
   }
 
   public abstract getForm(): CodeForm;
 
-  public abstract generateCode(userId: number, formData): Promise<number>;
+  public abstract generateCode(userId: number, formData: any): Promise<number>;
 
   protected async _generateCode(
     userId: number,
@@ -411,9 +413,11 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     }
     const exist =
       (
-        await this._prismaService.code.findMany({
+        await this._codeRepository.find({
           where: {
-            userId,
+            user: {
+              id: userId,
+            },
             source: this.getName(),
           },
         })
@@ -424,21 +428,23 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     }
 
     const code = Math.floor(100_000 + Math.random() * 999_999);
-    await this._prismaService.code.create({
-      data: {
-        code,
-        userId,
-        source: this.getName(),
-        customData,
+    await this._codeRepository.save({
+      code,
+      user: {
+        id: userId,
       },
+      source: this.getName(),
+      customData,
     });
     return code;
   }
 
   public async getCode(userId: number): Promise<number | undefined> {
-    const code = await this._prismaService.code.findFirst({
+    const code = await this._codeRepository.findOne({
       where: {
-        userId,
+        user: {
+          id: userId,
+        },
         source: this.getName(),
       },
     });
@@ -451,11 +457,13 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
   }
 
   public async verifyCode(userId: number, code: number): Promise<boolean> {
-    const exist = await this._prismaService.code.findFirst({
+    const exist = await this._codeRepository.findOne({
       where: {
-        userId,
-        source: this.getName(),
         code,
+        user: {
+          id: userId,
+        },
+        source: this.getName(),
       },
     });
 
@@ -463,25 +471,21 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
       return false;
     }
 
-    const authcode = await this._prismaService.code.delete({
-      where: {
-        id: exist.id,
+    await this._codeRepository.delete({
+      code,
+      user: {
+        id: userId,
       },
+      source: this.getName(),
     });
 
-    await this._prismaService.serviceUser.create({
-      data: {
-        customData: authcode.customData,
-        user: {
-          connect: {
-            id: userId,
-          },
-        },
-        service: {
-          connect: {
-            id: this.id,
-          },
-        },
+    await this._serviceUserRepository.save({
+      customData: exist.customData,
+      user: {
+        id: userId,
+      },
+      service: {
+        id: this.id,
       },
     });
     return true;

@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ResourcesService } from './resources.service';
-import { PrismaService } from '../../providers/prisma/prisma.service';
 import {
   Condition,
   Effect,
@@ -10,54 +9,38 @@ import {
   ResourceType,
   Rule,
 } from '../../types/permissions';
-import { Effect as PrismaEffect } from '@prisma/client';
 import { User } from '../../types/user';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class PermissionsService {
-  constructor(
-    @Inject() private _prismaService: PrismaService,
-    @Inject() private _resourcesService: ResourcesService,
-  ) {
-    this._prismaService = _prismaService;
+  @Inject('POLICIES_REPOSITORY')
+  private readonly _policiesRepository: Repository<Policy>;
+
+  @Inject('RULES_REPOSITORY')
+  private readonly _rulesRepository: Repository<Rule<Resource>>;
+
+  @Inject('USER_REPOSITORY')
+  private readonly _usersRepository: Repository<User>;
+
+  constructor(@Inject() private _resourcesService: ResourcesService) {
     this._resourcesService = _resourcesService;
-  }
-
-  private prismaEffectToEffect(effect: PrismaEffect): Effect {
-    return effect === 'ALLOW' ? 'allow' : 'deny';
-  }
-
-  private effectToPrismaEffect(effect: Effect): PrismaEffect {
-    return effect === 'allow' ? 'ALLOW' : 'DENY';
   }
 
   // ABAC
 
-  async canUserPerformAction<T extends Resource>(
-    user: Omit<User, 'actions'>,
-    action: T['actions'],
+  async can<T extends Resource>(
+    user: User,
+    action: string,
     resourceId: IdOf<T> | null,
     resourceType: ResourceType,
     ctx?: any,
   ): Promise<boolean> {
-    const policies = await this._prismaService.policy.findMany({
+    const policies = await this._policiesRepository.find({
       where: {
         users: {
-          some: {
-            id: user.id,
-          },
+          id: user.id,
         },
-        rules: {
-          some: {
-            AND: {
-              action: action.toString(),
-              resourceType: resourceType.resourceName,
-            },
-          },
-        },
-      },
-      include: {
-        rules: true,
       },
     });
 
@@ -77,7 +60,7 @@ export class PermissionsService {
         action: rule.action,
         resourceType: rule.resourceType,
         condition: new Function(`return ${rule.condition}`)() as Condition<T>,
-        effect: this.prismaEffectToEffect(rule.effect),
+        effect: rule.effect,
       })),
     }));
 
@@ -121,62 +104,68 @@ export class PermissionsService {
     if (name === '') {
       throw new Error('Policy name cannot be empty');
     }
-    const existingPolicy = await this._prismaService.policy.findUnique({
+    const existingPolicy = await this._policiesRepository.findOne({
       where: { id: name },
     });
     if (existingPolicy) {
       return existingPolicy.id;
     }
     return (
-      await this._prismaService.policy.create({
-        data: {
-          id: name,
-        },
-        select: {
-          id: true,
-        },
+      await this._policiesRepository.insert({
+        id: name,
       })
-    ).id;
+    ).identifiers[0].id;
   }
 
   async addRuleToPolicy<T extends Resource>(
     policyId: IdOf<Policy>,
-    action: T['actions'],
+    action: string,
     resourceType: ResourceType,
     condition: Condition<T>,
     effect: Effect,
   ): Promise<IdOf<Rule<T>>> {
     const actionString = action.toString();
+    if (actionString === '') {
+      throw new Error('Action cannot be empty');
+    }
+    // @ts-expect-error Fuck ts
+    const test = new (resourceType as unknown as T)();
+    if (!test.actions) {
+      throw new Error(
+        'Resource ' +
+          resourceType.resourceName +
+          " is missing decorator @Actions or it's empty",
+      );
+    }
+    if (test.actions.indexOf(actionString) === -1) {
+      throw new Error(
+        'Resource ' +
+          resourceType.resourceName +
+          " doesn't have such action as " +
+          actionString,
+      );
+    }
+    const rule = await this._rulesRepository.findOne({
+      where: {
+        action: actionString,
+        resourceType: resourceType.resourceName,
+        effect,
+      },
+    });
+    if (rule) {
+      rule.condition = condition.toString();
+      await this._rulesRepository.save(rule);
+      return rule.id;
+    }
     const id = (
-      await this._prismaService.rule.upsert({
-        where: {
-          action_resourceType_effect_policyId: {
-            action,
-            resourceType: resourceType.resourceName,
-            effect: this.effectToPrismaEffect(effect),
-            policyId,
-          },
-        },
-        create: {
-          resourceType: resourceType.resourceName,
-          action: actionString,
-          condition: condition.toString(),
-          effect: this.effectToPrismaEffect(effect),
-          policy: {
-            connect: {
-              id: policyId,
-            },
-          },
-        },
-        update: {
-          condition: condition.toString(),
-        },
-        select: {
-          id: true,
-        },
+      await this._rulesRepository.save({
+        action: actionString,
+        resourceType: resourceType.resourceName,
+        condition: condition.toString(),
+        effect,
+        policy: { id: policyId },
       })
     ).id;
-
     if (!id) {
       throw new Error('Failed to create rule');
     }
@@ -187,37 +176,45 @@ export class PermissionsService {
     userId: IdOf<User>,
     policyId: IdOf<Policy>,
   ): Promise<void> {
-    await this._prismaService.user.update({
+    const user = await this._usersRepository.findOne({
       where: { id: userId },
-      data: {
-        policies: {
-          connect: {
-            id: policyId,
-          },
-        },
-      },
+      relations: ['policies'],
     });
+    const policy = await this._policiesRepository.findOne({
+      where: { id: policyId },
+    });
+    if (!user || !policy) {
+      throw new Error('User or policy not found');
+    }
+    if (!user.policies) {
+      user.policies = [];
+    }
+    if (!policy.users) {
+      policy.users = [];
+    }
+    policy.users.push(user);
+    await this._policiesRepository.save(policy);
   }
 
   async removePolicyFromUser(
     userId: IdOf<User>,
     policyId: IdOf<Policy>,
   ): Promise<void> {
-    await this._prismaService.user.update({
+    const user = await this._usersRepository.findOne({
       where: { id: userId },
-      data: {
-        policies: {
-          disconnect: {
-            id: policyId,
-          },
-        },
-      },
+      relations: ['policies'],
     });
+    const policy = await this._policiesRepository.findOne({
+      where: { id: policyId },
+    });
+    if (!user || !policy) {
+      throw new Error('User or policy not found');
+    }
+    policy.users = policy.users.filter((u) => u.id !== user.id);
+    await this._policiesRepository.save(policy);
   }
 
-  async removeRuleFromPolicy(ruleId: IdOf<Rule<Resource>>): Promise<void> {
-    await this._prismaService.rule.delete({
-      where: { id: ruleId },
-    });
+  async removeRule(ruleId: IdOf<Rule<Resource>>): Promise<void> {
+    await this._rulesRepository.delete({ id: ruleId });
   }
 }

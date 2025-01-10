@@ -7,15 +7,20 @@ import {
 import { Request } from 'express';
 import { AuthContext } from './auth.context';
 import { TokenPayload } from '../../types/auth';
-import { PrismaService } from '../../providers/prisma/prisma.service';
+import { Repository } from 'typeorm';
+import { User } from '../../types/user';
+import { PermissionsService } from '../permissions/permissions.service';
 
 @Injectable()
 export class AuthService {
   @Inject()
   private _authContext: AuthContext;
 
+  @Inject('USER_REPOSITORY')
+  private _userRepository: Repository<User>;
+
   @Inject()
-  private _prismaService: PrismaService;
+  private _permissionsService: PermissionsService;
 
   constructor(private firebaseService: FirebaseService) {}
 
@@ -94,7 +99,7 @@ export class AuthService {
     if (typeof user === 'string') {
       return { error: user };
     }
-    const userExists = !!(await this._prismaService.user.findUnique({
+    const userExists = !!(await this._userRepository.findOne({
       where: { email },
     }));
     if (userExists) {
@@ -102,14 +107,15 @@ export class AuthService {
         error: 'PostgreSQL: Error (user already exists with that email)',
       };
     }
-    await this._prismaService.user.create({
-      data: {
+    const id = (
+      await this._userRepository.insert({
         firebaseId: user.uid,
         email,
         name,
         surname,
-      },
-    });
+      })
+    ).identifiers[0].id;
+    await this._permissionsService.addPolicyToUser(id, 'User');
     return {
       token: await this.firebaseService
         .getApp()
@@ -137,8 +143,8 @@ export class AuthService {
   public async setAuthContextFromTokenPayloadAsync(
     payload: TokenPayload,
   ): Promise<boolean> {
-    const user = await this._prismaService.user.findUnique({
-      where: { firebaseId: payload.sub },
+    const user = await this._userRepository.findOne({
+      where: { firebaseId: payload.uid },
     });
     if (!user) {
       return false;

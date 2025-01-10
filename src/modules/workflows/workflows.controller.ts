@@ -115,11 +115,10 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    return await this._workflowsService.updateWorkflow(
-      workflowIdN,
-      body.name,
-      body.description,
-    );
+    return await this._workflowsService.updateWorkflow(workflowIdN, {
+      name: body.name,
+      description: body.description,
+    });
   }
 
   @Private()

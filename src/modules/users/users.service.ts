@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../../providers/prisma/prisma.service';
-import { User } from '../../types/user';
+import { FullUser, ListUser, User } from '../../types/user';
+import { Repository } from 'typeorm';
 import { PermissionsService } from '../permissions/permissions.service';
 
 @Injectable()
@@ -8,7 +8,8 @@ export class UsersService implements OnModuleInit {
   @Inject()
   private _permissionsService: PermissionsService;
 
-  constructor(private prisma: PrismaService) {}
+  @Inject('USER_REPOSITORY')
+  private _repository: Repository<User>;
 
   async onModuleInit() {
     const globalPolicy = await this._permissionsService.createPolicy('User');
@@ -22,69 +23,46 @@ export class UsersService implements OnModuleInit {
     );
   }
 
-  async getAllUsers() {
-    return this.prisma.user.findMany();
-  }
-
-  async getUserById(id: number) {
-    return this.prisma.user.findUnique({
-      where: { id },
-    });
-  }
-
-  async getUserByFirebaseId(firebaseId: string) {
-    return this.prisma.user.findUnique({
-      where: { firebaseId },
-    });
-  }
-
-  async getUserByEmail(email: string, performer: Omit<User, 'actions'>) {
-    const userId = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-
+  private async getFullUserById(
+    id: number,
+    performer: User,
+  ): Promise<FullUser | undefined> {
     if (
-      !(await this._permissionsService.canUserPerformAction(
-        performer,
-        'read',
-        userId.id,
-        User,
-      ))
+      !(await this._permissionsService.can<User>(performer, 'read', id, User))
     ) {
-      return null;
+      return undefined;
     }
-    return this.prisma.user.findUnique({
-      where: { id: userId.id },
-    });
-  }
-
-  async createUser(
-    firebaseId: string,
-    email: string,
-    name: string,
-    surname: string,
-  ) {
-    return this.prisma.user.create({
-      data: {
-        firebaseId,
-        email,
-        name,
-        surname,
-      },
-    });
-  }
-
-  async updateUser(id: number, data: Partial<User>) {
-    return this.prisma.user.update({
-      where: { id },
-      data,
-    });
-  }
-
-  async deleteUser(id: number) {
-    return this.prisma.user.delete({
+    const user = await this._repository.findOne({
       where: { id },
     });
+
+    return user as FullUser;
+  }
+
+  private async getListUserById(
+    id: number,
+    performer: User,
+  ): Promise<ListUser | undefined> {
+    if (
+      !(await this._permissionsService.can<User>(performer, 'list', id, User))
+    ) {
+      return undefined;
+    }
+    const user = await this._repository.findOne({
+      where: { id },
+    });
+
+    return user as ListUser;
+  }
+
+  async getUserById(
+    id: number,
+    performer: User,
+  ): Promise<FullUser | ListUser | undefined> {
+    const fullUser = await this.getFullUserById(id, performer);
+    if (fullUser) {
+      return fullUser;
+    }
+    return this.getListUserById(id, performer);
   }
 }
