@@ -5,5 +5,5 @@ export class NodeDTO {
   name: string;
   description: string;
   type: string;
-  fields: Field[];
+  fields?: Field[];
 }

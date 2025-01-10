@@ -497,5 +497,4 @@ export type ListService = {
   name: string;
   logo: string;
   description: string;
-  nodes: ListNode[];
-} & ServiceMetadata;
+};

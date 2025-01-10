@@ -15,6 +15,7 @@ import { AuthContext } from '../auth/auth.context';
 import { ServiceWithCode, ServiceWithOAuth } from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('services')
 @Controller('services')
@@ -110,7 +111,7 @@ export class ServicesController {
     }
   }
 
-  @Private()
+  @Public()
   @Get('/:serviceName/nodes')
   @ApiParam({
     name: 'serviceName',
@@ -137,12 +138,12 @@ export class ServicesController {
       name: node.getName(),
       description: node.getDescription(),
       type: node.type,
-      fields: node.getFields(),
+      fields: this._authContext.authenticated ? node.getFields() : undefined,
     }));
     return nodeDTO;
   }
 
-  @Private()
+  @Public()
   @Get('/')
   @ApiResponse({
     status: 200,

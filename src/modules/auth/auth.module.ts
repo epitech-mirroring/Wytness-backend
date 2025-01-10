@@ -6,9 +6,15 @@ import { AuthContext } from './auth.context';
 import { DatabaseModule } from '../../providers/database/database.module';
 import { userProviders } from '../../providers/database/providers/user.providers';
 import { PermissionsModule } from '../permissions/permissions.module';
+import { RequestScopeModule } from 'nj-request-scope';
 
 @Module({
-  imports: [FirebaseModule, DatabaseModule, PermissionsModule],
+  imports: [
+    FirebaseModule,
+    DatabaseModule,
+    PermissionsModule,
+    RequestScopeModule,
+  ],
   providers: [AuthService, AuthContext, ...userProviders],
   controllers: [AuthController],
   exports: [AuthContext, AuthService],

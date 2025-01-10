@@ -48,17 +48,10 @@ export class ServicesService {
     return this.services.map(
       (service) =>
         ({
-          ...(service.serviceMetadata || {}),
           id: service.id,
           name: service.name,
           description: service.description,
-          nodes: service.nodes.map((node) => {
-            return {
-              id: node.id,
-              name: node.getName(),
-              type: node.type,
-            };
-          }),
+          logo: service.logo,
         }) as ListService,
     );
   }

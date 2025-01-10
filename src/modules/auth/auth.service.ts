@@ -68,15 +68,16 @@ export class AuthService {
       .catch((error) => {
         return error.message;
       });
+    let result: { token: string } | { error: string };
     if (typeof user === 'object') {
-      return {
-        token: await this.firebaseService
-          .getApp()
-          .auth()
-          .createCustomToken(user.uid),
+      result = {
+        token: await this.firebaseService.getAuth().currentUser.getIdToken(),
       };
+    } else {
+      result = { error: user };
     }
-    return { error: user };
+    await this.firebaseService.getAuth().signOut();
+    return result;
   }
 
   async register(
@@ -116,12 +117,9 @@ export class AuthService {
       })
     ).identifiers[0].id;
     await this._permissionsService.addPolicyToUser(id, 'User');
-    return {
-      token: await this.firebaseService
-        .getApp()
-        .auth()
-        .createCustomToken(user.uid),
-    };
+    const token = await this.firebaseService.getAuth().currentUser.getIdToken();
+    await this.firebaseService.getAuth().signOut();
+    return { token };
   }
 
   public extractTokenFromRequest(request: Request): string | null {
@@ -152,5 +150,9 @@ export class AuthService {
 
     this._authContext.user = user;
     return true;
+  }
+
+  public resetAuthContext() {
+    this._authContext.user = undefined;
   }
 }
