@@ -42,6 +42,7 @@ export class PermissionsService {
           id: user.id,
         },
       },
+      relations: ['rules'],
     });
 
     if (policies.length === 0) {
