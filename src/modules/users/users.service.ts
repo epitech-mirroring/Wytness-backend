@@ -36,7 +36,12 @@ export class UsersService implements OnModuleInit {
       where: { id },
     });
 
-    return user as FullUser;
+    return {
+      surname: user.surname,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
   }
 
   private async getListUserById(
@@ -52,7 +57,10 @@ export class UsersService implements OnModuleInit {
       where: { id },
     });
 
-    return user as ListUser;
+    return {
+      id: user.id,
+      name: user.name,
+    };
   }
 
   async getUserById(
