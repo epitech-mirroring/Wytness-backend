@@ -35,7 +35,7 @@ export class DiscordService extends ServiceWithOAuth {
       'discord',
       'Integrate Wytness with your discord servers',
       [_dmNew, _dmSend, _dmReact],
-      "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/636e0a69f118df70ad7828d4_icon_clyde_blurple_RGB.svg",
+      'https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/636e0a69f118df70ad7828d4_icon_clyde_blurple_RGB.svg',
       {
         authorize: 'https://discord.com/oauth2/authorize',
         token: 'https://discord.com/api/oauth2/token',
