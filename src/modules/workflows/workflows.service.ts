@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import {
   Workflow,
+  WorkflowBasicInfo,
   WorkflowExecution,
   WorkflowExecutionTrace,
   WorkflowNode,
@@ -9,11 +10,16 @@ import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
 import { Repository } from 'typeorm';
 import { NodeType, Trigger } from '../../types/services';
+import { PermissionsService } from '../permissions/permissions.service';
+import { User } from '../../types/user';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
   @Inject(ServicesService)
   private _servicesService: ServicesService;
+
+  @Inject(PermissionsService)
+  private _permissionsService: PermissionsService;
 
   @Inject(UsersService)
   private _usersService: UsersService;
@@ -61,6 +67,27 @@ export class WorkflowsService implements OnModuleInit {
     const dbWorkflows = await this._workflowRepository.find({
       relations: ['owner', 'nodes', 'nodes.node'],
     });
+    const globalPolicy = await this._permissionsService.createPolicy('User');
+
+    await this._permissionsService.addRuleToPolicy<Workflow>(
+      globalPolicy,
+      'read',
+      Workflow,
+      (user, resource) => {
+        return user.id === resource.owner.id;
+      },
+      'allow',
+    );
+
+    await this._permissionsService.addRuleToPolicy<Workflow>(
+      globalPolicy,
+      'delete',
+      Workflow,
+      (user, resource) => {
+        return user.id === resource.owner.id;
+      },
+      'allow',
+    );
 
     for (const dbWorkflow of dbWorkflows) {
       const workflow = new Workflow(dbWorkflow.name, dbWorkflow.description);
@@ -150,8 +177,17 @@ export class WorkflowsService implements OnModuleInit {
     return this.workflows.find((workflow) => workflow.name === name);
   }
 
-  public listWorkflows(userId: number): Workflow[] {
-    return this.workflows.filter((workflow) => workflow.owner.id === userId);
+  public async listWorkflows(performer: User): Promise<WorkflowBasicInfo[]> {
+    const authorizedWorkflows = [];
+
+    for (const workflow of this.workflows) {
+      const authorizedWorkflow = await this.getWorkflow(performer, workflow.id);
+      if (authorizedWorkflow) {
+        authorizedWorkflows.push(authorizedWorkflow);
+      }
+    }
+
+    return authorizedWorkflows;
   }
 
   private recursiveFindNode(
@@ -230,11 +266,10 @@ export class WorkflowsService implements OnModuleInit {
     );
   }
 
-  public async getWorkflow(workflowId: number): Promise<Workflow | undefined> {
-    return this.workflows.find((workflow) => workflow.id === workflowId);
-  }
-
-  public async deleteWorkflow(workflowId: number): Promise<void> {
+  public async getWorkflow(
+    performer: User,
+    workflowId: number,
+  ): Promise<WorkflowBasicInfo | undefined> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
@@ -243,17 +278,77 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'read',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return;
+    }
+    const ownerId = await this._permissionsService.can(
+      performer,
+      'read',
+      workflow.owner.id,
+      User,
+    );
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      description: workflow.description,
+      ownerId: ownerId ? workflow.owner.id : null,
+    } as WorkflowBasicInfo;
+  }
+
+  public async deleteWorkflow(
+    performer: User,
+    workflowId: number,
+  ): Promise<boolean> {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return false;
+    }
+
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'delete',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return false;
+    }
+
+    const executions = await this._workflowExecutionRepository.find({
+      where: { workflow: { id: workflowId } },
+    });
+
+    for (const execution of executions) {
+      await this._workflowExecutionTraceRepository.delete({
+        id: execution.firstTraceId,
+      });
+    }
+
+    await this._workflowNodeRepository.delete({ workflow: { id: workflowId } });
+
     const dbWorkflow = await this._workflowRepository.delete({
       id: workflowId,
     });
 
     if (!dbWorkflow) {
-      return;
+      return false;
     }
 
     this.workflows = this.workflows.filter(
       (workflow) => workflow.id !== workflowId,
     );
+    return true;
   }
 
   public async updateWorkflow(

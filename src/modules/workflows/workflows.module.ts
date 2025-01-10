@@ -11,6 +11,7 @@ import {
   workflowProviders,
 } from '../../providers/database/providers/workflow.providers';
 import { DatabaseModule } from '../../providers/database/database.module';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { DatabaseModule } from '../../providers/database/database.module';
     forwardRef(() => ServicesModule),
     UsersModule,
     DatabaseModule,
+    PermissionsModule,
   ],
   providers: [
     WorkflowsService,

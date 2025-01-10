@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Inject,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -40,7 +41,7 @@ export class WorkflowsController {
     },
   })
   async getWorkflows() {
-    return this._workflowsService.listWorkflows(this._authContext.user.id);
+    return this._workflowsService.listWorkflows(this._authContext.user);
   }
 
   @Private()
@@ -68,7 +69,15 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    return await this._workflowsService.getWorkflow(workflowIdN);
+    const workflow = await this._workflowsService.getWorkflow(
+      this._authContext.user,
+      workflowIdN,
+    );
+    if (workflow) {
+      return workflow;
+    } else {
+      throw new NotFoundException('Workflow not found');
+    }
   }
 
   @Private()
@@ -88,7 +97,16 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    return await this._workflowsService.deleteWorkflow(workflowIdN);
+    if (
+      await this._workflowsService.deleteWorkflow(
+        this._authContext.user,
+        workflowIdN,
+      )
+    ) {
+      return;
+    } else {
+      throw new NotFoundException('Workflow not found');
+    }
   }
 
   @Private()

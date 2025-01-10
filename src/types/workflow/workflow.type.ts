@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../user';
+import { Actions, Resource } from '../permissions';
 
 @Entity('workflow_nodes')
 export class WorkflowNode {
@@ -76,8 +77,17 @@ export class WorkflowNode {
   }
 }
 
+export type WorkflowBasicInfo = {
+  id: number;
+  name: string;
+  description: string;
+  ownerId?: number;
+};
+
 @Entity('workflows')
-export class Workflow {
+@Actions('read', 'create', 'update', 'delete')
+export class Workflow extends Resource {
+  static resourceName = 'workflows';
   @ApiProperty({
     description: 'The id of the Workflow',
     example: 1,
@@ -139,7 +149,8 @@ export class Workflow {
   @OneToMany(() => WorkflowExecution, (execution) => execution.workflow)
   executions: WorkflowExecution[];
 
-  constructor(name: string, description: string) {
+  constructor(name?: string, description?: string) {
+    super();
     this.name = name;
     this.description = description;
     this.entrypoints = [];

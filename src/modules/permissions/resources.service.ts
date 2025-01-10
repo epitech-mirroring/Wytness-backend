@@ -13,9 +13,12 @@ export class ResourcesService {
   ): Promise<T | null> => {
     // Derive the resource name based on the type
     const resourceName = resourceType.resourceName;
-
+    const relations = this._databaseService
+      .getRepository(resourceName)
+      .metadata.relations.map((relation) => relation.propertyName);
     return (await this._databaseService.getRepository(resourceName).findOne({
       where: { id: resourceId },
+      relations,
     })) as Promise<T>;
   };
 }
