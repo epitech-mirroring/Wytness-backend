@@ -1,4 +1,4 @@
-import { ListNode, Node } from './node.type';
+import { Node } from './node.type';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Trigger } from './trigger.type';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
@@ -8,7 +8,7 @@ import {
   Entity,
   JoinColumn,
   OneToMany,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Repository,
 } from 'typeorm';
 import { Code } from './code.type';
@@ -33,9 +33,7 @@ export type CodeForm = Array<CodeFormField>;
 @Injectable()
 @Entity('services')
 export abstract class Service implements OnModuleInit {
-  @PrimaryGeneratedColumn()
-  id: number;
-  @Column({ unique: true })
+  @PrimaryColumn('text')
   name: string;
   @Column('text')
   description: string;
@@ -46,6 +44,9 @@ export abstract class Service implements OnModuleInit {
   nodes: Node[];
   @Column(() => ServiceMetadata)
   serviceMetadata: ServiceMetadata;
+  @JoinColumn()
+  @OneToMany(() => ServiceUser, (serviceUser) => serviceUser.service)
+  linkedUsers: ServiceUser[];
 
   protected constructor(
     name: string,
@@ -106,14 +107,12 @@ export abstract class Service implements OnModuleInit {
           description: node.getDescription(),
           type: node.type,
           service: {
-            id: service.id,
+            name: this.name,
           },
         });
         node.id = result.id;
       }
     }
-
-    this.id = service.id;
 
     for (const node of service.nodes) {
       const localNode = this.nodes.find((n) => n.getName() === node.name);
@@ -172,11 +171,12 @@ export type OAuthEndpoints = {
 export type OAuthConfig = {
   clientId: string;
   scopes: string;
+  scopesSeparator?: string;
 };
 
 export const OAuthDefaultConfig: OAuthConfig = {
   clientId: 'client_id',
-  scopes: 'scopes',
+  scopes: 'scope',
 };
 
 @Injectable()
@@ -264,6 +264,8 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     await this._serviceUserRepository.save({
       user: {
         id: user.id,
+        firebaseId: user.firebaseId,
+        email: user.email,
       },
       customData: this.parseTokenResponse(data),
       service: {
@@ -273,7 +275,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
   }
 
   public buildOAuthUrl(): string {
-    return `${this.endpoints.authorize}?${this.config.clientId}=${this.getClientId()}&redirect_uri=${this.getRedirectUri()}&response_type=code&${this.config.scopes}=${this.getScopes().join(' ')}`;
+    return `${this.endpoints.authorize}?${this.config.clientId}=${this.getClientId()}&redirect_uri=${encodeURI(this.getRedirectUri())}&response_type=code&${this.config.scopes}=${encodeURI(this.getScopes().join(this.config.scopesSeparator || ' '))}`;
   }
 
   public afterLogin(): void {}
@@ -485,7 +487,7 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
         id: userId,
       },
       service: {
-        id: this.id,
+        name: this.getName(),
       },
     });
     return true;

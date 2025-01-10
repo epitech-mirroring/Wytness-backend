@@ -15,10 +15,10 @@ export class ServiceUser {
   @PrimaryGeneratedColumn()
   id: number;
   @JoinColumn()
-  @ManyToOne(() => Service)
+  @ManyToOne(() => Service, (service) => service.linkedUsers)
   service: Service;
   @JoinColumn()
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, (user) => user.linkedServices)
   user: User;
   @Column('simple-json')
   customData: any;

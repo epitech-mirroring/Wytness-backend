@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Inject,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Post,
@@ -50,15 +51,23 @@ export class ServicesController {
       throw new NotFoundException('Service not found');
     }
 
+    let success = false;
+    let message = '';
     switch (service.serviceMetadata.useAuth) {
       case 'OAuth':
-        await (service as ServiceWithOAuth).onOAuthCallback(
-          body,
-          this._authContext.user,
-        );
+        try {
+          await (service as ServiceWithOAuth).onOAuthCallback(
+            body,
+            this._authContext.user,
+          );
+          success = true;
+        } catch (error) {
+          success = false;
+          message = error.message;
+        }
         break;
       case 'code':
-        await (service as ServiceWithCode).verifyCode(
+        success = await (service as ServiceWithCode).verifyCode(
           this._authContext.user.id,
           parseInt(body.code),
         );
@@ -68,6 +77,10 @@ export class ServicesController {
           'Service does not use OAuth or code auth',
         );
     }
+    if (!success) {
+      throw new InternalServerErrorException(message);
+    }
+    return;
   }
 
   @Private()
@@ -172,6 +185,9 @@ export class ServicesController {
     },
   })
   async getConnectedServices() {
-    return this._servicesService.getConnections(this._authContext.user.id);
+    return this._servicesService.getConnections(
+      this._authContext.user.id,
+      this._authContext.user,
+    );
   }
 }
