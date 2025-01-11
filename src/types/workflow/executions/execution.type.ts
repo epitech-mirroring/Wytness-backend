@@ -93,4 +93,15 @@ export class WorkflowExecution {
     this.statistics = new WorkflowExecutionStatistics();
     this.traceMap = new Map();
   }
+
+  addOldData(trace: WorkflowExecutionTrace, parentTraceUUID: string) {
+    if (parentTraceUUID === null) {
+      trace.previous = null;
+    } else {
+      const parentTrace = this.traceMap.get(parentTraceUUID);
+      if (parentTrace) {
+        trace.setData(parentTrace.getData(), parentTrace.getIndex());
+      }
+    }
+  }
 }

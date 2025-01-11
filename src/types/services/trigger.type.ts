@@ -22,9 +22,11 @@ export abstract class Trigger extends Node {
   ): Promise<[any, string | null]> {
     const trace = new WorkflowExecutionTrace(this, config);
     trace.input = data || {};
+    execution.addOldData(trace, parentTraceUUID);
     const out = await this.trigger(outputLabel, data, config, trace);
     execution.statistics.nodesExecuted++;
     trace.output = out || {};
+    trace.addData(out);
     const uuid = execution.addTrace(trace, parentTraceUUID);
     trace.statistics.duration.end = new Date();
     return [out, uuid];

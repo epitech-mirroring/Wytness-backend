@@ -9,20 +9,20 @@ export class Field {
   title: string;
   name: string;
   description: string;
-  type: FieldType;
+  type: FieldType[];
   nullable: boolean;
 
   constructor(
     title: string,
     name: string,
     description: string,
-    type: FieldType,
+    type: FieldType | FieldType[],
     nullable: boolean,
   ) {
     this.title = title;
     this.name = name;
     this.description = description;
-    this.type = type;
+    this.type = Array.isArray(type) ? type : [type];
     this.nullable = nullable;
   }
 }

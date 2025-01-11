@@ -14,7 +14,6 @@ export abstract class Action extends Node {
 
   public abstract execute(
     outputLabel: string,
-    data: any,
     config: any,
     trace: WorkflowExecutionTrace,
   ): Promise<any>;
@@ -28,9 +27,11 @@ export abstract class Action extends Node {
   ): Promise<[any, string | null]> {
     const trace = new WorkflowExecutionTrace(this, config);
     trace.input = data || {};
-    const out = await this.execute(outputLabel, data, config, trace);
+    execution.addOldData(trace, parentTraceUUID);
+    const out = await this.execute(outputLabel, config, trace);
     execution.statistics.nodesExecuted++;
     trace.output = out || {};
+    trace.addData(out);
     const uuid = execution.addTrace(trace, parentTraceUUID);
     trace.statistics.duration.end = new Date();
     return [out, uuid];
