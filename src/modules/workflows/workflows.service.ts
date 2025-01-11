@@ -98,6 +98,26 @@ export class WorkflowsService implements OnModuleInit {
       'allow',
     );
 
+    await this._permissionsService.addRuleToPolicy<Workflow>(
+      globalPolicy,
+      'update',
+      Workflow,
+      (user, resource) => {
+        return user.id === resource.owner.id;
+      },
+      'allow',
+    );
+
+    await this._permissionsService.addRuleToPolicy<Workflow>(
+      globalPolicy,
+      'create',
+      Workflow,
+      () => {
+        return true;
+      },
+      'allow',
+    );
+
     const dbWorkflows = await this._workflowRepository.find({
       relations: [
         'owner',
@@ -400,17 +420,28 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public async updateWorkflow(
+    performer: User,
     workflowId: number,
     data: Partial<Omit<Workflow, 'id'>>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return;
+      return false;
     }
 
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'update',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return false;
+    }
     const dbWorkflow = await this._workflowRepository.update(
       {
         id: workflowId,
@@ -419,26 +450,31 @@ export class WorkflowsService implements OnModuleInit {
     );
 
     if (!dbWorkflow) {
-      return;
+      return false;
     }
 
     workflow.name = data.name || workflow.name;
     workflow.description = data.description || workflow.description;
+    return true;
   }
 
   public async createWorkflow(
+    performer: User,
     name: string,
     description: string,
-    userId: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (
+      !(await this._permissionsService.can(performer, 'create', null, Workflow))
+    ) {
+      return false;
+    }
     const workflow = new Workflow(name, description);
-
     const workflowId = (
       await this._workflowRepository.save({
         name,
         description,
         owner: {
-          id: userId,
+          id: performer.id,
         },
       })
     ).id;
@@ -449,12 +485,13 @@ export class WorkflowsService implements OnModuleInit {
     });
 
     if (!dbWorkflow) {
-      return;
+      return false;
     }
 
     workflow.id = dbWorkflow.id;
     workflow.owner = dbWorkflow.owner;
     this.workflows.push(workflow);
+    return true;
   }
 
   public async getNodes(workflowId: number): Promise<WorkflowNode[]> {

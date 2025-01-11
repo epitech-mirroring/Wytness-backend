@@ -133,10 +133,19 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    return await this._workflowsService.updateWorkflow(workflowIdN, {
-      name: body.name,
-      description: body.description,
-    });
+    const workflow = await this._workflowsService.updateWorkflow(
+      this._authContext.user,
+      workflowIdN,
+      {
+        name: body.name,
+        description: body.description,
+      },
+    );
+    if (workflow) {
+      return;
+    } else {
+      throw new NotFoundException('Workflow not found');
+    }
   }
 
   @Private()
@@ -150,11 +159,16 @@ export class WorkflowsController {
     description: 'Workflow created',
   })
   async createWorkflow(@Body() body: WorkflowCreateDTO) {
-    return await this._workflowsService.createWorkflow(
+    const created = await this._workflowsService.createWorkflow(
+      this._authContext.user,
       body.name,
       body.description,
-      this._authContext.user.id,
     );
+    if (created) {
+      return;
+    } else {
+      throw new ForbiddenException('Not authorized');
+    }
   }
 
   @Private()
