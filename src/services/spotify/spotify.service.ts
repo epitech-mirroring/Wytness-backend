@@ -1,5 +1,8 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { OAuthDefaultConfig, ServiceWithOAuth } from "src/types/services/service.type";
+import {
+  OAuthDefaultConfig,
+  ServiceWithOAuth,
+} from 'src/types/services/service.type';
 import { ConfigService } from '@nestjs/config';
 import { PlayingMusicTrigger } from './nodes/triggers/status/playing.trigger';
 import { PausePlaybackAction } from './nodes/actions/player/pause.action';

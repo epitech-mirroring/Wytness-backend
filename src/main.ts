@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
+import 'reflect-metadata';
 
 const isOpenApiEnable = (argv: string[]): boolean => {
   for (const arg of argv) {
@@ -35,6 +36,7 @@ async function bootstrap() {
     SwaggerModule.setup('api', app, document);
 
     await writeSwaggerJson(document);
+    return;
   }
 
   app.setGlobalPrefix('api');

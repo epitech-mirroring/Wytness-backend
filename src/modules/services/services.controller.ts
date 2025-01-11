@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Inject,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Post,
@@ -15,6 +16,7 @@ import { AuthContext } from '../auth/auth.context';
 import { ServiceWithCode, ServiceWithOAuth } from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('services')
 @Controller('services')
@@ -49,15 +51,23 @@ export class ServicesController {
       throw new NotFoundException('Service not found');
     }
 
+    let success = false;
+    let message = '';
     switch (service.serviceMetadata.useAuth) {
       case 'OAuth':
-        await (service as ServiceWithOAuth).onOAuthCallback(
-          body,
-          this._authContext.user,
-        );
+        try {
+          await (service as ServiceWithOAuth).onOAuthCallback(
+            body,
+            this._authContext.user,
+          );
+          success = true;
+        } catch (error) {
+          success = false;
+          message = error.message;
+        }
         break;
       case 'code':
-        await (service as ServiceWithCode).verifyCode(
+        success = await (service as ServiceWithCode).verifyCode(
           this._authContext.user.id,
           parseInt(body.code),
         );
@@ -67,6 +77,10 @@ export class ServicesController {
           'Service does not use OAuth or code auth',
         );
     }
+    if (!success) {
+      throw new InternalServerErrorException(message);
+    }
+    return;
   }
 
   @Private()
@@ -110,7 +124,7 @@ export class ServicesController {
     }
   }
 
-  @Private()
+  @Public()
   @Get('/:serviceName/nodes')
   @ApiParam({
     name: 'serviceName',
@@ -137,12 +151,12 @@ export class ServicesController {
       name: node.getName(),
       description: node.getDescription(),
       type: node.type,
-      fields: node.getFields(),
+      fields: this._authContext.authenticated ? node.getFields() : undefined,
     }));
     return nodeDTO;
   }
 
-  @Private()
+  @Public()
   @Get('/')
   @ApiResponse({
     status: 200,
@@ -171,6 +185,9 @@ export class ServicesController {
     },
   })
   async getConnectedServices() {
-    return this._servicesService.getConnections(this._authContext.user.id);
+    return this._servicesService.getConnections(
+      this._authContext.user.id,
+      this._authContext.user,
+    );
   }
 }

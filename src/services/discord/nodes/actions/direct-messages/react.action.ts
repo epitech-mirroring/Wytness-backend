@@ -3,7 +3,7 @@ import { DiscordSnowflake } from '../../../discord.type';
 import { ConfigService } from '@nestjs/config';
 import { Action } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
-import { Field, FieldType } from '../../../../../types/services/field.type';
+import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 
 @Injectable()
 export class DirectMessageReactAction extends Action {
@@ -30,9 +30,11 @@ export class DirectMessageReactAction extends Action {
       channel_id: DiscordSnowflake;
       id: DiscordSnowflake;
     },
-    config: any,
+    _config: any,
+    trace: WorkflowExecutionTrace,
   ): Promise<void> {
-    await fetch(
+    await this.fetch(
+      trace,
       `https://discord.com/api/v9/channels/${data.channel_id}/messages/${data.id}/reactions/${encodeURIComponent(config.reaction)}/@me`,
       {
         method: 'PUT',

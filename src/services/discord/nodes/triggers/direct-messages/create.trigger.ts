@@ -3,6 +3,8 @@ import { DiscordMessageCreatedEvent } from '../../../discord.type';
 import { Trigger } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 import { Field, FieldType } from '../../../../../types/services/field.type';
+import { WorkflowExecutionTrace } from '../../../../../types/workflow';
+import { User } from '../../../../../types/user';
 
 @Injectable()
 export class DirectMessageCreatedTrigger extends Trigger {
@@ -25,7 +27,21 @@ export class DirectMessageCreatedTrigger extends Trigger {
     );
   }
 
-  public trigger(data: DiscordMessageCreatedEvent): any {
+  async isTriggered(
+    user: User,
+    config: { channelId: string },
+    data: DiscordMessageCreatedEvent,
+  ): Promise<boolean> {
+    void user;
+    return data.channel_id === config.channelId;
+  }
+
+  public trigger(
+    data: DiscordMessageCreatedEvent,
+    _config: { channelId: string },
+    trace: WorkflowExecutionTrace,
+  ): any {
+    trace.statistics.dataUsed.download += JSON.stringify(data).length;
     return data;
   }
 
