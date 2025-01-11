@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Workflow } from '../workflow';
 import { Actions, Policy, Resource } from '../permissions';
+import { ServiceUser } from '../services';
 
 @Entity('users')
 @Actions('read', 'list', 'update', 'delete')
@@ -37,6 +38,10 @@ export class User extends Resource {
   @JoinColumn()
   @ManyToMany(() => Policy, (policy) => policy.users)
   policies: Policy[];
+
+  @JoinColumn()
+  @OneToMany(() => ServiceUser, (serviceUser) => serviceUser.user)
+  linkedServices: ServiceUser[];
 
   static resourceName: string = 'users';
 }
