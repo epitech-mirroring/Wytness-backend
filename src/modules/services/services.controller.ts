@@ -13,12 +13,24 @@ import { ServicesService } from './services.service';
 import { Private } from '../auth/decorators/private.decorator';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { AuthContext } from '../auth/auth.context';
-import { ServiceWithCode, ServiceWithOAuth } from '../../types/services';
+import {
+  ListService,
+  ServiceWithCode,
+  ServiceWithOAuth,
+} from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
-import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import {
+  ApiResponse,
+  ApiTags,
+  ApiBody,
+  ApiParam,
+  ApiBearerAuth,
+  ApiInternalServerErrorResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 
-@ApiTags('services')
+@ApiTags('Services')
 @Controller('services')
 export class ServicesController {
   @Inject()
@@ -42,6 +54,18 @@ export class ServicesController {
     status: 200,
     description: 'Service connected',
   })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Service does not use OAuth or code auth',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error',
+  })
+  @ApiBearerAuth('token')
   async authCallBack(
     @Param('serviceName') serviceName: string,
     @Body() body: ServiceConnectDTO,
@@ -102,6 +126,11 @@ export class ServicesController {
     status: 400,
     description: 'Service does not use code auth',
   })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  @ApiBearerAuth('token')
   async postAuthForm(
     @Param('serviceName') serviceName: string,
     @Body() body: any,
@@ -135,11 +164,14 @@ export class ServicesController {
     status: 200,
     description: 'List of service nodes',
     schema: {
-      properties: {
-        nodes: { type: 'array' },
+      items: {
+        $ref: getSchemaPath(NodeDTO),
       },
-      example: { nodes: [] },
     },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
   })
   async getServiceNodes(@Param('serviceName') serviceName: string) {
     const service = this._servicesService.getServiceByName(serviceName);
@@ -152,6 +184,7 @@ export class ServicesController {
       description: node.getDescription(),
       type: node.type,
       fields: this._authContext.authenticated ? node.getFields() : undefined,
+      labels: node.labels,
     }));
     return nodeDTO;
   }
@@ -162,10 +195,9 @@ export class ServicesController {
     status: 200,
     description: 'List of services',
     schema: {
-      properties: {
-        services: { type: 'array' },
+      items: {
+        $ref: getSchemaPath(ListService),
       },
-      example: { services: [] },
     },
   })
   async getServices() {

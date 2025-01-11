@@ -30,7 +30,11 @@ export class PlayingMusicTrigger extends Trigger {
     return null;
   }
 
-  public async isTriggered(user: User, config: any): Promise<boolean> {
+  public async isTriggered(
+    _label: string,
+    user: User,
+    config: any,
+  ): Promise<boolean> {
     void config;
     const service = this.getService();
     if (!service) {

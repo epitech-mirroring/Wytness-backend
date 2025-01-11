@@ -23,7 +23,7 @@ export enum NodeType {
 export interface MinimalConfig {
   user: User;
   _workflowId: number;
-  _next: number[];
+  _next: { [key: string]: number[] };
 }
 
 @Entity('nodes')
@@ -46,6 +46,10 @@ export abstract class Node {
     onDelete: 'CASCADE',
   })
   public service: Service;
+
+  @Column('text', { array: true, nullable: true })
+  public labels: string[];
+
   private readonly fields: Field[] = [];
 
   protected fetch = async (
@@ -83,11 +87,13 @@ export abstract class Node {
   protected constructor(
     name: string,
     description: string,
+    labels: string[] = ['output'],
     type: NodeType,
     fields: Field[] = [],
   ) {
     this.name = name;
     this.description = description;
+    this.labels = labels;
     this.type = type;
     this.fields = fields;
   }
@@ -107,6 +113,7 @@ export abstract class Node {
   public abstract getWorkflowService(): WorkflowsService;
 
   public async _run(
+    label: string,
     data: any,
     config: MinimalConfig & any,
     workflowExecution: WorkflowExecution,
@@ -116,6 +123,7 @@ export abstract class Node {
       return;
     }
     const [result, traceUUID] = await this.run(
+      label,
       data,
       config,
       workflowExecution,
@@ -125,7 +133,7 @@ export abstract class Node {
     if (workflowExecution.status === WorkflowExecutionStatus.FAILED) {
       return;
     }
-    for (const next of config._next) {
+    for (const next of config._next[label]) {
       await this.getWorkflowService().runNode(
         next,
         result,
@@ -139,6 +147,7 @@ export abstract class Node {
   }
 
   public abstract run(
+    outputLabel: string,
     data: any,
     config: MinimalConfig & any,
     workflowExecution: WorkflowExecution,

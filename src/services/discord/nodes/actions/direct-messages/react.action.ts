@@ -18,6 +18,7 @@ export class DirectMessageReactAction extends Action {
   }
 
   async execute(
+    _outputLabel: string,
     data: {
       channel_id: DiscordSnowflake;
       id: DiscordSnowflake;

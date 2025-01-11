@@ -7,6 +7,7 @@ import { WorkflowsController } from './workflows.controller';
 import {
   workflowExecutionProviders,
   workflowExecutionTraceProviders,
+  workflowNodeNextProviders,
   workflowNodeProviders,
   workflowProviders,
 } from '../../providers/database/providers/workflow.providers';
@@ -27,6 +28,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
     ...workflowProviders,
     ...workflowExecutionProviders,
     ...workflowExecutionTraceProviders,
+    ...workflowNodeNextProviders,
   ],
   controllers: [WorkflowsController],
   exports: [WorkflowsService],

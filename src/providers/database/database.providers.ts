@@ -7,6 +7,8 @@ import {
   WorkflowExecution,
   WorkflowExecutionTrace,
   WorkflowNode,
+  WorkflowNodeNext,
+  WorkflowNodePrevious,
 } from '../../types/workflow';
 import { Code, Node, Service, ServiceUser } from '../../types/services';
 
@@ -35,6 +37,8 @@ export const databaseProviders = [
           Node,
           ServiceUser,
           Code,
+          WorkflowNodePrevious,
+          WorkflowNodeNext,
         ],
         synchronize: true,
       });

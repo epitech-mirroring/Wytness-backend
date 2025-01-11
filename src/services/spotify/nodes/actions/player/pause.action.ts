@@ -12,7 +12,7 @@ export class PausePlaybackAction extends Action {
     super('Pause Playback', 'Pause the playback of the user');
   }
 
-  async execute(data: any, config: any): Promise<void> {
+  async execute(_label: string, data: any, config: any): Promise<void> {
     const user = config.user;
     const service = this.getService();
     if (!service) {

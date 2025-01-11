@@ -5,6 +5,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
 import 'reflect-metadata';
+import { FullUser } from './types/user';
+import { NodeDTO } from './dtos/node/node.dto';
+import { ListService } from './types/services';
 
 const isOpenApiEnable = (argv: string[]): boolean => {
   for (const arg of argv) {
@@ -30,9 +33,12 @@ async function bootstrap() {
       .setTitle('Wytness API')
       .setDescription('The Wytness API description')
       .setVersion('1.0')
-      .addServer('http://localhost:3000', 'Localhost server')
+      .addServer('http://localhost:4040', 'Localhost server')
+      .addBearerAuth()
       .build();
-    const document = SwaggerModule.createDocument(app, config);
+    const document = SwaggerModule.createDocument(app, config, {
+      extraModels: [FullUser, NodeDTO, ListService],
+    });
     SwaggerModule.setup('api', app, document);
 
     await writeSwaggerJson(document);

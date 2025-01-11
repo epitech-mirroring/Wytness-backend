@@ -13,6 +13,7 @@ import {
 } from 'typeorm';
 import { Code } from './code.type';
 import { ServiceUser } from './connection.type';
+import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 
 export class ServiceMetadata {
   @Column('boolean')
@@ -109,6 +110,7 @@ export abstract class Service implements OnModuleInit {
           service: {
             name: this.name,
           },
+          labels: node.labels,
         });
         node.id = result.id;
       }
@@ -494,9 +496,29 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
   }
 }
 
-export type ListService = {
+@ApiSchema({
+  name: 'Service',
+  description: 'Service entity',
+})
+export class ListService {
+  @ApiProperty({
+    description: 'The id of the service',
+    example: 1,
+  })
   id: number;
+  @ApiProperty({
+    description: 'The name of the service',
+    example: 'Service',
+  })
   name: string;
+  @ApiProperty({
+    description: 'An url toward the logo of the service',
+    example: 'https://example.com/logo.png',
+  })
   logo: string;
+  @ApiProperty({
+    description: 'The description of the service',
+    example: 'Service description',
+  })
   description: string;
-};
+}

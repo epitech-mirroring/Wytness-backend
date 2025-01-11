@@ -5,11 +5,13 @@ import {
   WorkflowExecution,
   WorkflowExecutionTrace,
   WorkflowNode,
+  WorkflowNodeNext,
+  WorkflowNodePrevious,
 } from '../../types/workflow';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
 import { Repository } from 'typeorm';
-import { NodeType, Trigger } from '../../types/services';
+import { MinimalConfig, NodeType, Trigger } from '../../types/services';
 import { PermissionsService } from '../permissions/permissions.service';
 import { User } from '../../types/user';
 
@@ -36,37 +38,44 @@ export class WorkflowsService implements OnModuleInit {
   @Inject('WORKFLOW_EXECUTION_TRACE_REPOSITORY')
   private _workflowExecutionTraceRepository: Repository<WorkflowExecutionTrace>;
 
+  @Inject('WORKFLOW_NODE_NEXT_REPOSITORY')
+  private _workflowNodeNextRepository: Repository<WorkflowNodeNext>;
+
   workflows: Workflow[] = [];
 
   private async recursiveEntrypointSetup(
     initial: WorkflowNode,
   ): Promise<WorkflowNode> {
-    const next = await this._workflowNodeRepository.find({
-      where: {
-        previous: {
-          id: initial.id,
-        },
-      },
-      relations: ['node'],
+    const dbNext = await this._workflowNodeNextRepository.find({
+      where: { parent: { id: initial.id } },
+      relations: ['next', 'next.previous', 'next.parent', 'next.parent.node'],
     });
 
-    const nexts = [];
+    const builtNext = [];
 
-    for (const node of next) {
-      let nextNode = new WorkflowNode(node.id, node.config);
-      nextNode.node = node.node;
-      nextNode = await this.recursiveEntrypointSetup(nextNode);
-      nexts.push(nextNode);
+    for (const next of dbNext) {
+      const nextNodes = [];
+      const label = next.label;
+      for (const node of next.next) {
+        let nextNode = new WorkflowNode(node.parent.id, node.parent.config);
+        nextNode.node = node.parent.node;
+        nextNode = await this.recursiveEntrypointSetup(nextNode);
+        nextNodes.push({
+          parent: nextNode,
+          previous: null,
+        } as WorkflowNodePrevious);
+      }
+      builtNext.push({
+        label,
+        next: nextNodes,
+      });
     }
 
-    initial.next = nexts;
+    initial.next = builtNext;
     return initial;
   }
 
   async onModuleInit(): Promise<void> {
-    const dbWorkflows = await this._workflowRepository.find({
-      relations: ['owner', 'nodes', 'nodes.node'],
-    });
     const globalPolicy = await this._permissionsService.createPolicy('User');
 
     await this._permissionsService.addRuleToPolicy<Workflow>(
@@ -89,6 +98,16 @@ export class WorkflowsService implements OnModuleInit {
       'allow',
     );
 
+    const dbWorkflows = await this._workflowRepository.find({
+      relations: [
+        'owner',
+        'nodes',
+        'nodes.node',
+        'nodes.previous',
+        'nodes.previous.parent',
+      ],
+    });
+
     for (const dbWorkflow of dbWorkflows) {
       const workflow = new Workflow(dbWorkflow.name, dbWorkflow.description);
       workflow.id = dbWorkflow.id;
@@ -96,6 +115,9 @@ export class WorkflowsService implements OnModuleInit {
 
       for (const node of dbWorkflow.nodes) {
         if (node.node.type === NodeType.ACTION) {
+          if (!node.previous) {
+            workflow.strandedNodes.push(node);
+          }
           continue;
         }
         let entrypoint = new WorkflowNode(node.id, node.config);
@@ -106,12 +128,21 @@ export class WorkflowsService implements OnModuleInit {
         workflow.addEntrypoint(entrypoint);
       }
 
-      let nodes = workflow.entrypoints.map((node) => node.next).flat();
-      nodes = nodes.filter(
-        (node, index, self) =>
-          index === self.findIndex((t) => t.id === node.id),
-      );
-
+      const nodes = [];
+      const recursiveNodeSetup = async (node: WorkflowNode) => {
+        nodes.push(node);
+        for (const next of node.next) {
+          for (const nextNode of next.next) {
+            await recursiveNodeSetup(nextNode.parent);
+          }
+        }
+      };
+      for (const entrypoint of workflow.entrypoints) {
+        await recursiveNodeSetup(entrypoint);
+      }
+      for (const node of workflow.strandedNodes) {
+        await recursiveNodeSetup(node);
+      }
       for (const node of nodes) {
         workflow.addNode(node);
       }
@@ -133,25 +164,33 @@ export class WorkflowsService implements OnModuleInit {
             continue;
           }
 
-          const shouldRun = await triggerNode.isTriggered(
-            workflow.owner,
-            entrypoint.config,
-          );
-
-          if (shouldRun) {
-            const execution = new WorkflowExecution(workflow);
-            await triggerNode._run(
-              {},
-              {
-                ...entrypoint.config,
-                user: workflow.owner,
-                _workflowId: workflow.id,
-                _next: entrypoint.next.map((node) => node.id) || [],
-              },
-              execution,
-              null,
+          for (const label of triggerNode.labels) {
+            const shouldRun = await triggerNode.isTriggered(
+              label,
+              workflow.owner,
+              entrypoint.config,
             );
-            await this.saveExecution(execution);
+
+            if (shouldRun) {
+              const execution = new WorkflowExecution(workflow);
+              const nexts: { [key: string]: number[] } = {};
+              for (const next of entrypoint.next) {
+                nexts[next.label] = next.next.map((node) => node.parent.id);
+              }
+              await triggerNode._run(
+                label,
+                {},
+                {
+                  ...entrypoint.config,
+                  user: workflow.owner,
+                  _workflowId: workflow.id,
+                  _next: nexts,
+                } as MinimalConfig & any,
+                execution,
+                null,
+              );
+              await this.saveExecution(execution);
+            }
           }
         }
       }
@@ -199,9 +238,11 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     for (const next of node.next) {
-      const found = this.recursiveFindNode(next, nodeId);
-      if (found) {
-        return found;
+      for (const n of next.next) {
+        const found = this.recursiveFindNode(n.parent, nodeId);
+        if (found) {
+          return found;
+        }
       }
     }
 
@@ -253,17 +294,24 @@ export class WorkflowsService implements OnModuleInit {
       console.error('No action found for node', workflowNode.node.id);
       return;
     }
-    return action._run(
-      data,
-      {
-        user: workflow.owner,
-        _workflowId: workflow.id,
-        _next: workflowNode.next.map((node) => node.id) || [],
-        ...workflowNode.config,
-      },
-      execution,
-      parentTraceUUID,
-    );
+    for (const label of action.labels) {
+      const nexts: { [key: string]: number[] } = {};
+      for (const next of workflowNode.next) {
+        nexts[next.label] = next.next.map((node) => node.parent.id);
+      }
+      await action._run(
+        label,
+        data,
+        {
+          user: workflow.owner,
+          _workflowId: workflow.id,
+          _next: nexts,
+          ...workflowNode.config,
+        },
+        execution,
+        parentTraceUUID,
+      );
+    }
   }
 
   public async getWorkflow(
@@ -486,6 +534,7 @@ export class WorkflowsService implements OnModuleInit {
     nodeId: number,
     workflowId: number,
     previousNodeId: number,
+    previousNodeLabel: string,
     config: any,
   ): Promise<void> {
     const workflow = this.workflows.find(
@@ -515,7 +564,7 @@ export class WorkflowsService implements OnModuleInit {
 
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
-    previousNode.addNext(node);
+    previousNode.addNext(node, previousNodeLabel);
     workflow.addNode(node);
   }
 
@@ -556,17 +605,34 @@ export class WorkflowsService implements OnModuleInit {
           if (!triggerNode) {
             continue;
           }
-          const shouldRun = await triggerNode.isTriggered(
-            workflow.owner,
-            node.config,
-            data,
-          );
-          if (!shouldRun) {
-            continue;
+          for (const label of triggerNode.labels) {
+            const shouldRun = await triggerNode.isTriggered(
+              label,
+              workflow.owner,
+              node.config,
+              data,
+            );
+            if (shouldRun) {
+              const execution = new WorkflowExecution(workflow);
+              const nexts: { [key: string]: number[] } = {};
+              for (const next of node.next) {
+                nexts[next.label] = next.next.map((node) => node.parent.id);
+              }
+              await triggerNode._run(
+                label,
+                data,
+                {
+                  user: workflow.owner,
+                  _workflowId: workflow.id,
+                  _next: nexts,
+                  ...node.config,
+                },
+                execution,
+                null,
+              );
+              await this.saveExecution(execution);
+            }
           }
-          const execution = new WorkflowExecution(workflow);
-          await this.runNode(node.id, data, execution, null);
-          await this.saveExecution(execution);
         }
       }
     }

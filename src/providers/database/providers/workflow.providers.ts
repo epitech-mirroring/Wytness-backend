@@ -4,6 +4,7 @@ import {
   WorkflowExecution,
   WorkflowExecutionTrace,
   WorkflowNode,
+  WorkflowNodeNext,
 } from '../../../types/workflow';
 
 export const workflowProviders = [
@@ -19,6 +20,15 @@ export const workflowNodeProviders = [
     provide: 'WORKFLOW_NODE_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
       dataSource.getRepository(WorkflowNode),
+    inject: ['DATA_SOURCE'],
+  },
+];
+
+export const workflowNodeNextProviders = [
+  {
+    provide: 'WORKFLOW_NODE_NEXT_REPOSITORY',
+    useFactory: (dataSource: DataSource) =>
+      dataSource.getRepository(WorkflowNodeNext),
     inject: ['DATA_SOURCE'],
   },
 ];

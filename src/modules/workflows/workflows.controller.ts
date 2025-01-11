@@ -291,6 +291,7 @@ export class WorkflowsController {
         body.id,
         workflowIdN,
         body.previous,
+        'output',
         body.config,
       );
     }

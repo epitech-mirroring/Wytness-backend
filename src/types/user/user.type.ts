@@ -12,6 +12,7 @@ import {
 import { Workflow } from '../workflow';
 import { Actions, Policy, Resource } from '../permissions';
 import { ServiceUser } from '../services';
+import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 
 @Entity('users')
 @Actions('read', 'list', 'update', 'delete')
@@ -46,14 +47,35 @@ export class User extends Resource {
   static resourceName: string = 'users';
 }
 
-export type FullUser = {
+@ApiSchema({
+  name: 'FullUser',
+  description:
+    "The full user object, available for users you have the 'read' authorization on.",
+})
+export class FullUser {
+  @ApiProperty({
+    type: 'number',
+    description: 'The internal ID of the user',
+  })
   id: number;
+  @ApiProperty({
+    type: 'string',
+    description: 'The email of the user',
+  })
   email: string;
+  @ApiProperty({
+    type: 'string',
+    description: 'The name of the user',
+  })
   name: string;
+  @ApiProperty({
+    type: 'string',
+    description: 'The surname of the user',
+  })
   surname: string;
-};
+}
 
-export type ListUser = {
+export class ListUser {
   id: number;
   name: string;
-};
+}

@@ -7,12 +7,14 @@ export abstract class Trigger extends Node {
   protected constructor(
     name: string,
     description: string,
+    labels: string[] = ['output'],
     fields: Field[] = [],
   ) {
-    super(name, description, NodeType.TRIGGER, fields);
+    super(name, description, labels, NodeType.TRIGGER, fields);
   }
 
   public async run(
+    outputLabel: string,
     data: any,
     config: any,
     execution: WorkflowExecution,
@@ -20,7 +22,7 @@ export abstract class Trigger extends Node {
   ): Promise<[any, string | null]> {
     const trace = new WorkflowExecutionTrace(this, config);
     trace.input = data || {};
-    const out = await this.trigger(data, config, trace);
+    const out = await this.trigger(outputLabel, data, config, trace);
     execution.statistics.nodesExecuted++;
     trace.output = out || {};
     const uuid = execution.addTrace(trace, parentTraceUUID);
@@ -29,16 +31,19 @@ export abstract class Trigger extends Node {
   }
 
   public abstract trigger(
+    outputLabel: string,
     data: any,
     config: any,
     trace: WorkflowExecutionTrace,
   ): Promise<any>;
 
   public async isTriggered(
+    outputLabel: string,
     user: User,
     config: any,
     data?: any,
   ): Promise<boolean> {
+    void outputLabel;
     void user;
     void config;
     void data;

@@ -15,6 +15,7 @@ export class DirectMessageCreatedTrigger extends Trigger {
     super(
       'Direct Message Received Trigger',
       'Triggered when a direct message is received',
+      ['output'],
       [
         new Field(
           'Channel ID',
@@ -28,6 +29,7 @@ export class DirectMessageCreatedTrigger extends Trigger {
   }
 
   async isTriggered(
+    _label: string,
     user: User,
     config: { channelId: string },
     data: DiscordMessageCreatedEvent,
@@ -37,6 +39,7 @@ export class DirectMessageCreatedTrigger extends Trigger {
   }
 
   public trigger(
+    _outputLabel: string,
     data: DiscordMessageCreatedEvent,
     _config: { channelId: string },
     trace: WorkflowExecutionTrace,
