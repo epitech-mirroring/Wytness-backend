@@ -8,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Node } from '../../services';
-import { WorkflowNodePrevious } from './node.previous.type';
 import { WorkflowNodeNext } from './node.next.type';
 import { Workflow } from '../workflow.type';
 
@@ -26,18 +25,18 @@ export class WorkflowNode {
 
   @JoinColumn()
   @OneToOne(
-    () => WorkflowNodePrevious,
+    () => WorkflowNodeNext,
     (workflowNodePrevious) => workflowNodePrevious.parent,
     {
       nullable: true,
     },
   )
-  previous?: WorkflowNodePrevious;
+  previous?: WorkflowNodeNext;
 
   @JoinColumn()
   @OneToMany(
     () => WorkflowNodeNext,
-    (workflowNodeNext) => workflowNodeNext.parent,
+    (workflowNodeNext) => workflowNodeNext.next,
   )
   next: WorkflowNodeNext[];
 

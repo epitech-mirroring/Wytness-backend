@@ -6,7 +6,6 @@ import {
   WorkflowExecutionTrace,
   WorkflowNode,
   WorkflowNodeNext,
-  WorkflowNodePrevious,
 } from '../../types/workflow';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
@@ -48,7 +47,7 @@ export class WorkflowsService implements OnModuleInit {
   ): Promise<WorkflowNode> {
     const dbNext = await this._workflowNodeNextRepository.find({
       where: { parent: { id: initial.id } },
-      relations: ['next', 'next.previous', 'next.parent', 'next.parent.node'],
+      relations: ['next', 'next.previous', 'next', 'next.node'],
     });
 
     const builtNext = [];
@@ -57,13 +56,10 @@ export class WorkflowsService implements OnModuleInit {
       const nextNodes = [];
       const label = next.label;
       for (const node of next.next) {
-        let nextNode = new WorkflowNode(node.parent.id, node.parent.config);
-        nextNode.node = node.parent.node;
+        let nextNode = new WorkflowNode(node.id, node.config);
+        nextNode.node = node.node;
         nextNode = await this.recursiveEntrypointSetup(nextNode);
-        nextNodes.push({
-          parent: nextNode,
-          previous: null,
-        } as WorkflowNodePrevious);
+        nextNodes.push(nextNode);
       }
       builtNext.push({
         label,
@@ -153,7 +149,7 @@ export class WorkflowsService implements OnModuleInit {
         nodes.push(node);
         for (const next of node.next) {
           for (const nextNode of next.next) {
-            await recursiveNodeSetup(nextNode.parent);
+            await recursiveNodeSetup(nextNode);
           }
         }
       };
@@ -195,7 +191,7 @@ export class WorkflowsService implements OnModuleInit {
               const execution = new WorkflowExecution(workflow);
               const nexts: { [key: string]: number[] } = {};
               for (const next of entrypoint.next) {
-                nexts[next.label] = next.next.map((node) => node.parent.id);
+                nexts[next.label] = next.next.map((node) => node.id);
               }
               await triggerNode._run(
                 label,
@@ -259,7 +255,7 @@ export class WorkflowsService implements OnModuleInit {
 
     for (const next of node.next) {
       for (const n of next.next) {
-        const found = this.recursiveFindNode(n.parent, nodeId);
+        const found = this.recursiveFindNode(n, nodeId);
         if (found) {
           return found;
         }
@@ -317,7 +313,7 @@ export class WorkflowsService implements OnModuleInit {
     for (const label of action.labels) {
       const nexts: { [key: string]: number[] } = {};
       for (const next of workflowNode.next) {
-        nexts[next.label] = next.next.map((node) => node.parent.id);
+        nexts[next.label] = next.next.map((node) => node.id);
       }
       await action._run(
         label,
@@ -653,7 +649,7 @@ export class WorkflowsService implements OnModuleInit {
               const execution = new WorkflowExecution(workflow);
               const nexts: { [key: string]: number[] } = {};
               for (const next of node.next) {
-                nexts[next.label] = next.next.map((node) => node.parent.id);
+                nexts[next.label] = next.next.map((node) => node.id);
               }
               await triggerNode._run(
                 label,

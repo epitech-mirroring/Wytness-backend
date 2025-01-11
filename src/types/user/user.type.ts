@@ -2,10 +2,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToMany,
   OneToMany,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -16,12 +16,13 @@ import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 
 @Entity('users')
 @Actions('read', 'list', 'update', 'delete')
+@Index(['firebaseId'], { unique: true })
 export class User extends Resource {
   @PrimaryGeneratedColumn()
   id: number;
-  @PrimaryColumn('text')
+  @Column('text')
   firebaseId: string;
-  @PrimaryColumn('text')
+  @Column('text', { unique: true })
   email: string;
   @Column('text')
   name: string;

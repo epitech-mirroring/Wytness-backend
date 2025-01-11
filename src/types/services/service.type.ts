@@ -266,8 +266,6 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     await this._serviceUserRepository.save({
       user: {
         id: user.id,
-        firebaseId: user.firebaseId,
-        email: user.email,
       },
       customData: this.parseTokenResponse(data),
       service: {

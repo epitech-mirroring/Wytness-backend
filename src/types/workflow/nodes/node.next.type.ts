@@ -8,7 +8,6 @@ import {
   Unique,
 } from 'typeorm';
 import { WorkflowNode } from './node.type';
-import { WorkflowNodePrevious } from './node.previous.type';
 
 @Entity('workflow_nodes_next')
 @Unique(['parent', 'label'])
@@ -24,10 +23,10 @@ export class WorkflowNodeNext {
 
   @JoinColumn()
   @OneToMany(
-    () => WorkflowNodePrevious,
+    () => WorkflowNode,
     (workflowNodePrevious) => workflowNodePrevious.previous,
   )
-  next: WorkflowNodePrevious[];
+  next: WorkflowNode[];
 
   @Column('text')
   label: string;
