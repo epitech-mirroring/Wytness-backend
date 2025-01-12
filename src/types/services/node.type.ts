@@ -129,8 +129,11 @@ export abstract class Node {
       workflowExecution,
       parentTraceUUID,
     );
-    // @ts-expect-error status is updated in the run method
-    if (workflowExecution.status === WorkflowExecutionStatus.FAILED) {
+    if (
+      // @ts-expect-error This is a valid check
+      workflowExecution.status === WorkflowExecutionStatus.FAILED ||
+      result === null
+    ) {
       return;
     }
     for (const next of config._next[label]) {
@@ -152,7 +155,7 @@ export abstract class Node {
     config: MinimalConfig & any,
     workflowExecution: WorkflowExecution,
     parentTraceUUID: string | null,
-  ): Promise<[any, string | null]>;
+  ): Promise<[any | null, string | null]>;
 
   protected getService(): Service {
     return this.getWorkflowService().getServices().getServiceFromNode(this.id);

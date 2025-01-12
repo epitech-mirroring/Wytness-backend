@@ -16,7 +16,7 @@ export abstract class Action extends Node {
     outputLabel: string,
     config: any,
     trace: WorkflowExecutionTrace,
-  ): Promise<any>;
+  ): Promise<any | null>;
 
   public async run(
     outputLabel: string,
@@ -24,7 +24,7 @@ export abstract class Action extends Node {
     config: any,
     execution: WorkflowExecution,
     parentTraceUUID: string | null,
-  ): Promise<[any, string | null]> {
+  ): Promise<[any | null, string | null]> {
     const trace = new WorkflowExecutionTrace(this, config);
     trace.input = data || {};
     execution.addOldData(trace, parentTraceUUID);

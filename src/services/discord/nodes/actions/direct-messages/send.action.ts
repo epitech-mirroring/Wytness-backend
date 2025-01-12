@@ -42,8 +42,8 @@ export class DirectMessageSendAction extends Action {
     _config: any,
     trace: WorkflowExecutionTrace,
   ): Promise<void> {
-    const channelID = trace.processStringWithVariables(trace.config.channel_id);
-    const content = trace.processStringWithVariables(trace.config.content);
+    const channelID = trace.processPipelineString(trace.config.channel_id);
+    const content = trace.processPipelineString(trace.config.content);
 
     await this.fetch(
       trace,

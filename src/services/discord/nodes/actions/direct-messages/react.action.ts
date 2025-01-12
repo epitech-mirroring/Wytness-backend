@@ -1,5 +1,4 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { DiscordSnowflake } from '../../../discord.type';
 import { ConfigService } from '@nestjs/config';
 import { Action, Field, FieldType } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
@@ -49,9 +48,9 @@ export class DirectMessageReactAction extends Action {
     _config: any,
     trace: WorkflowExecutionTrace,
   ): Promise<void> {
-    const channelID = trace.processStringWithVariables(trace.config.channel_id);
-    const messageID = trace.processStringWithVariables(trace.config.id);
-    const emoji = trace.processStringWithVariables(trace.config.emoji);
+    const channelID = trace.processPipelineString(trace.config.channel_id);
+    const messageID = trace.processPipelineString(trace.config.id);
+    const emoji = trace.processPipelineString(trace.config.emoji);
 
     console.log('channelID', channelID);
 
