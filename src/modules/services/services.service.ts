@@ -13,6 +13,7 @@ import {
 } from '../../types/services';
 import { PermissionsService } from '../permissions/permissions.service';
 import { User } from '../../types/user';
+import { FlowControlService } from '../../services/flow_control/flow-control.service';
 
 @Injectable()
 export class ServicesService {
@@ -26,8 +27,14 @@ export class ServicesService {
     private _discordService: DiscordService,
     @Inject(forwardRef(() => SpotifyService))
     private _spotifyService: SpotifyService,
+    @Inject(forwardRef(() => FlowControlService))
+    private _flowControlService: FlowControlService,
   ) {
-    this.services = [this._discordService, this._spotifyService];
+    this.services = [
+      this._discordService,
+      this._spotifyService,
+      this._flowControlService,
+    ];
   }
 
   public addService(service: Service): void {
