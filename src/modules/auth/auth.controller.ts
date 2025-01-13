@@ -37,10 +37,10 @@ export class AuthController {
     },
   })
   async login(@Body() body: AuthDto): Promise<{ token: string }> {
-    const token: { token: string } | { error: string } =
+    const token: { token: string; debug?: string } | { error: string } =
       await this.authService.login(body.email, body.password);
     if ('token' in token) {
-      return { token: token.token };
+      return token;
     }
     throw new UnauthorizedException(token.error);
   }
@@ -62,7 +62,7 @@ export class AuthController {
     schema: { example: { statusCode: 401, error: 'string' } },
   })
   async register(@Body() body: RegisterDto): Promise<{ token: string }> {
-    const token: { token: string } | { error: string } =
+    const token: { token: string; debug?: string } | { error: string } =
       await this.authService.register(
         body.email,
         body.password,
@@ -70,7 +70,7 @@ export class AuthController {
         body.surname,
       );
     if ('token' in token) {
-      return { token: token.token };
+      return token;
     }
     throw new UnauthorizedException(token.error);
   }

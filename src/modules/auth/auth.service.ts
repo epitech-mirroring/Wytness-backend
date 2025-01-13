@@ -10,6 +10,7 @@ import { TokenPayload } from '../../types/auth';
 import { Repository } from 'typeorm';
 import { User } from '../../types/user';
 import { PermissionsService } from '../permissions/permissions.service';
+import * as process from 'node:process';
 
 @Injectable()
 export class AuthService {
@@ -68,13 +69,25 @@ export class AuthService {
       .catch((error) => {
         return error.message;
       });
-    let result: { token: string } | { error: string };
+    let result: { token: string; debug?: string } | { error: string };
     if (typeof user === 'object') {
       result = {
-        token: await this.firebaseService.getAuth().currentUser.getIdToken(),
-      };
+        token: await this.firebaseService
+          .getApp()
+          .auth()
+          .createCustomToken(user.uid),
+        debug: undefined,
+      } as { token: string; debug?: string };
     } else {
-      result = { error: user };
+      result = { error: user } as { error: string };
+    }
+    if ('error' in result) {
+      return result;
+    }
+    if (process.env.NODE_ENV === 'development') {
+      result.debug = await this.firebaseService
+        .getAuth()
+        .currentUser.getIdToken();
     }
     await this.firebaseService.getAuth().signOut();
     return result;
@@ -117,9 +130,19 @@ export class AuthService {
       })
     ).identifiers[0].id;
     await this._permissionsService.addPolicyToUser(id, 'User');
-    const token = await this.firebaseService.getAuth().currentUser.getIdToken();
+    const token = await this.firebaseService
+      .getApp()
+      .auth()
+      .createCustomToken(user.uid);
+    const result = {
+      token,
+      debug:
+        process.env.NODE_ENV === 'development'
+          ? await this.firebaseService.getAuth().currentUser.getIdToken()
+          : undefined,
+    };
     await this.firebaseService.getAuth().signOut();
-    return { token };
+    return result;
   }
 
   public extractTokenFromRequest(request: Request): string | null {
