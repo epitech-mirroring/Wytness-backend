@@ -13,6 +13,7 @@ import { Repository } from 'typeorm';
 import { MinimalConfig, NodeType, Trigger } from '../../types/services';
 import { PermissionsService } from '../permissions/permissions.service';
 import { User } from '../../types/user';
+import { ListOptions } from '../../types/global';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
@@ -232,14 +233,102 @@ export class WorkflowsService implements OnModuleInit {
     return this.workflows.find((workflow) => workflow.name === name);
   }
 
-  public async listWorkflows(performer: User): Promise<WorkflowBasicInfo[]> {
-    const authorizedWorkflows = [];
+  public async listWorkflows(
+    performer: User,
+    options?: ListOptions,
+  ): Promise<WorkflowBasicInfo[]> {
+    let authorizedWorkflows = [];
 
     for (const workflow of this.workflows) {
       const authorizedWorkflow = await this.getWorkflow(performer, workflow.id);
       if (authorizedWorkflow) {
         authorizedWorkflows.push(authorizedWorkflow);
       }
+    }
+
+    if (options) {
+      authorizedWorkflows = await Promise.all(
+        authorizedWorkflows.map(async (workflow) => {
+          workflow.__executions = await this._workflowExecutionRepository.find({
+            where: { workflow: { id: workflow.id } },
+          });
+          return workflow;
+        }),
+      );
+
+      if (options.timeframe) {
+        if (options.timeframe.start) {
+          authorizedWorkflows = authorizedWorkflows.filter(
+            (workflow) =>
+              workflow.__executions.filter(
+                (execution: WorkflowExecution) =>
+                  execution.statistics.duration.start >=
+                  options.timeframe.start,
+              ).length > 0,
+          );
+        }
+        if (options.timeframe.end) {
+          authorizedWorkflows = authorizedWorkflows.filter(
+            (workflow) =>
+              workflow.__executions.filter(
+                (execution: WorkflowExecution) =>
+                  execution.statistics.duration.end <= options.timeframe.end,
+              ).length > 0,
+          );
+        }
+      }
+
+      if (options.sort) {
+        const sort = options.order === 'ASC' ? 1 : -1;
+        const getStat = (execution: Workflow, stat: string) => {
+          const path = stat.split('.');
+          let current = execution;
+          for (const p of path) {
+            if (!current[p]) {
+              return 0;
+            }
+            current = current[p];
+          }
+
+          if (typeof current === 'string') {
+            if (current === 'COMPLETED') {
+              return 1;
+            }
+            if (current === 'FAILED') {
+              return -1;
+            }
+            if (!isNaN(parseFloat(current))) {
+              return parseFloat(current);
+            }
+            return 0;
+          } else {
+            if (current instanceof Date) {
+              return current.getTime();
+            }
+            if (typeof current === 'object') {
+              return Object.keys(current).length;
+            }
+            return 0;
+          }
+        };
+        authorizedWorkflows = authorizedWorkflows.sort(
+          (a, b) =>
+            sort * (getStat(a, options.sort) - getStat(b, options.sort)),
+        );
+      }
+
+      if (options.offset) {
+        authorizedWorkflows = authorizedWorkflows.slice(options.offset);
+      }
+
+      if (options.limit) {
+        authorizedWorkflows = authorizedWorkflows.slice(0, options.limit);
+      }
+
+      authorizedWorkflows = authorizedWorkflows.map(async (workflow) => {
+        delete workflow.__executions;
+        return workflow;
+      });
     }
 
     return authorizedWorkflows;
@@ -754,5 +843,30 @@ export class WorkflowsService implements OnModuleInit {
 
   public getServices(): ServicesService {
     return this._servicesService;
+  }
+
+  async getExecutions(performer: User, workflowId: number) {
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return;
+    }
+
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'read',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return;
+    }
+
+    return await this._workflowExecutionRepository.find({
+      where: { workflow: { id: workflowId } },
+    });
   }
 }
