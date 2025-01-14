@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -9,6 +10,7 @@ import {
 import { WorkflowNode } from './node.type';
 
 @Entity('workflow_nodes_next')
+@Index(['parent', 'label'], { unique: true })
 export class WorkflowNodeNext {
   @PrimaryGeneratedColumn()
   id: number;
