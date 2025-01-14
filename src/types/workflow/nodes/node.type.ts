@@ -4,7 +4,6 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Node } from '../../services';
@@ -24,9 +23,9 @@ export class WorkflowNode {
   config: any;
 
   @JoinColumn()
-  @OneToOne(
+  @ManyToOne(
     () => WorkflowNodeNext,
-    (workflowNodePrevious) => workflowNodePrevious.parent,
+    (workflowNodePrevious) => workflowNodePrevious.next,
     {
       nullable: true,
     },
@@ -36,7 +35,7 @@ export class WorkflowNode {
   @JoinColumn()
   @OneToMany(
     () => WorkflowNodeNext,
-    (workflowNodeNext) => workflowNodeNext.next,
+    (workflowNodeNext) => workflowNodeNext.parent,
   )
   next: WorkflowNodeNext[];
 

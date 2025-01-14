@@ -190,7 +190,7 @@ export class WorkflowExecutionTrace {
       }
       let openedBraces = 0;
       let currentArg = '';
-      for (let i = name.length + 5; i < process.length - 3; i++) {
+      for (let i = name.length + 4; i < process.length - 3; i++) {
         if (process[i] === '(') {
           openedBraces++;
         }

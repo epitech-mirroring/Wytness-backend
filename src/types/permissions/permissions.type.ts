@@ -48,7 +48,10 @@ export class Policy {
   @OneToMany(() => Rule, (rule) => rule.policy)
   rules: Rule<Resource>[];
 
-  @ManyToMany(() => User, (user) => user.policies)
+  @ManyToMany(() => User, (user) => user.policies, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   @JoinTable({
     name: 'users_policies',
   })
