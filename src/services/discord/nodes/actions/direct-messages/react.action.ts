@@ -52,8 +52,6 @@ export class DirectMessageReactAction extends Action {
     const messageID = trace.processPipelineString(trace.config.id);
     const emoji = trace.processPipelineString(trace.config.emoji);
 
-    console.log('channelID', channelID);
-
     if (emoji.length !== 1) {
       this.error(trace, 'Emoji must be a single character');
     }

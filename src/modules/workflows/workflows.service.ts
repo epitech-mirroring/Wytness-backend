@@ -256,8 +256,8 @@ export class WorkflowsService implements OnModuleInit {
         }),
       );
 
-      if (options.timeframe) {
-        if (options.timeframe.start) {
+      if ('timeframe' in options) {
+        if ('start' in options.timeframe) {
           authorizedWorkflows = authorizedWorkflows.filter(
             (workflow) =>
               workflow.__executions.filter(
@@ -267,7 +267,7 @@ export class WorkflowsService implements OnModuleInit {
               ).length > 0,
           );
         }
-        if (options.timeframe.end) {
+        if ('end' in options.timeframe) {
           authorizedWorkflows = authorizedWorkflows.filter(
             (workflow) =>
               workflow.__executions.filter(
@@ -278,7 +278,7 @@ export class WorkflowsService implements OnModuleInit {
         }
       }
 
-      if (options.sort) {
+      if ('sort' in options) {
         const sort = options.order === 'ASC' ? 1 : -1;
         const getStat = (execution: Workflow, stat: string) => {
           const path = stat.split('.');
@@ -311,21 +311,47 @@ export class WorkflowsService implements OnModuleInit {
             return 0;
           }
         };
-        authorizedWorkflows = authorizedWorkflows.sort(
-          (a, b) =>
-            sort * (getStat(a, options.sort) - getStat(b, options.sort)),
-        );
+        authorizedWorkflows = authorizedWorkflows.map((workflow) => {
+          workflow.__executions = workflow.__executions.sort((a, b) => {
+            const aStat = getStat(a, options.sort);
+            const bStat = getStat(b, options.sort);
+            if (aStat > bStat) {
+              return sort;
+            }
+            if (aStat < bStat) {
+              return -sort;
+            }
+            return 0;
+          });
+          return workflow;
+        });
+
+        authorizedWorkflows = authorizedWorkflows.sort((a, b) => {
+          const aStat = a.__executions[0]
+            ? getStat(a.__executions[0], options.sort)
+            : 0;
+          const bStat = b.__executions[0]
+            ? getStat(b.__executions[0], options.sort)
+            : 0;
+          if (aStat > bStat) {
+            return sort;
+          }
+          if (aStat < bStat) {
+            return -sort;
+          }
+          return 0;
+        });
       }
 
-      if (options.offset) {
+      if ('offset' in options) {
         authorizedWorkflows = authorizedWorkflows.slice(options.offset);
       }
 
-      if (options.limit) {
+      if ('limit' in options) {
         authorizedWorkflows = authorizedWorkflows.slice(0, options.limit);
       }
 
-      authorizedWorkflows = authorizedWorkflows.map(async (workflow) => {
+      authorizedWorkflows = authorizedWorkflows.map((workflow) => {
         delete workflow.__executions;
         return workflow;
       });
@@ -743,16 +769,8 @@ export class WorkflowsService implements OnModuleInit {
       : undefined;
 
     if (previousNodeId && !previousNode) {
-      console.log('No previous node found');
       return false;
     }
-
-    console.log({
-      parent: {
-        id: previousNodeId,
-      },
-      label: previousNodeLabel,
-    });
 
     let dbNode: WorkflowNode = await this._workflowNodeRepository.save({
       workflow: {

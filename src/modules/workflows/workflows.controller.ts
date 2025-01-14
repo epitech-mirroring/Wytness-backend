@@ -10,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { Private } from '../auth/decorators/private.decorator';
 import { WorkflowsService } from './workflows.service';
@@ -41,8 +42,25 @@ export class WorkflowsController {
       example: { workflows: [] },
     },
   })
-  async getWorkflows() {
-    return this._workflowsService.listWorkflows(this._authContext.user);
+  async getWorkflows(
+    @Query('limit') limit?: string,
+    @Query('sort') sort?: string,
+    @Query('order') order?: 'ASC' | 'DESC',
+  ) {
+    const options = {};
+    if (sort) {
+      options['sort'] = sort;
+    }
+    if (order) {
+      options['order'] = order;
+    }
+    if (limit) {
+      options['limit'] = parseInt(limit);
+    }
+    return this._workflowsService.listWorkflows(
+      this._authContext.user,
+      options,
+    );
   }
 
   @Private()
