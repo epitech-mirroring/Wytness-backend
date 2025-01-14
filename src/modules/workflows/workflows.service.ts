@@ -673,14 +673,6 @@ export class WorkflowsService implements OnModuleInit {
         id: nodeId,
       },
       config,
-      previous: previousNodeId
-        ? {
-            parent: {
-              id: previousNodeId,
-            },
-            label: previousNodeLabel,
-          }
-        : null,
     });
     if (!dbNode) {
       return false;
@@ -705,6 +697,15 @@ export class WorkflowsService implements OnModuleInit {
     node.node = this._servicesService.getNode(nodeId);
     if (previousNode) {
       previousNode.addNext(node, previousNodeLabel);
+
+      const dbNext = await this._workflowNodeNextRepository.findOne({
+        where: { parent: { id: previousNodeId }, label: previousNodeLabel },
+        relations: ['next', 'next.node'],
+      });
+
+      dbNext.next.push(dbNode);
+
+      await this._workflowNodeNextRepository.save(dbNext);
     }
     workflow.addNode(node);
     return true;
