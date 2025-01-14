@@ -500,12 +500,8 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
 })
 export class ListService {
   @ApiProperty({
-    description: 'The id of the service',
-    example: 1,
-  })
-  id: number;
-  @ApiProperty({
-    description: 'The name of the service',
+    description:
+      'The name of the service, is unique and can be used to identify the service',
     example: 'Service',
   })
   name: string;
