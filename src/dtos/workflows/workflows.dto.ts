@@ -34,12 +34,12 @@ export class WorkflowCreateNodeDTO {
   previous?: number;
 
   @ApiProperty({
-    description: 'Is this Node an entrypoint',
-    example: true,
+    description: 'The label of the output to connect to',
+    example: 1,
   })
   @IsOptional()
-  @IsBoolean()
-  entrypoint?: boolean;
+  @IsString()
+  label?: string;
 }
 
 export class WorkflowCreateDTO {

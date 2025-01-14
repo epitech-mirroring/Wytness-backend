@@ -194,8 +194,15 @@ export class WorkflowsController {
     if (isNaN(workflowIdN)) {
       throw new BadRequestException('Invalid workflowId');
     }
-
-    return await this._workflowsService.getNodes(workflowIdN);
+    const response = await this._workflowsService.getNodes(
+      this._authContext.user,
+      workflowIdN,
+    );
+    if (response) {
+      return response;
+    } else {
+      throw new NotFoundException('Workflow not found');
+    }
   }
 
   @Private()
@@ -223,7 +230,11 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid nodeId');
     }
 
-    return await this._workflowsService.deleteNode(workflowIdN, nodeIdN);
+    return await this._workflowsService.deleteNode(
+      this._authContext.user,
+      workflowIdN,
+      nodeIdN,
+    );
   }
 
   @Private()
@@ -262,6 +273,7 @@ export class WorkflowsController {
     }
 
     return await this._workflowsService.updateNode(
+      this._authContext.user,
       workflowIdN,
       nodeIdN,
       body.config,
@@ -292,23 +304,18 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    if (body.entrypoint) {
-      return await this._workflowsService.addEntrypointToWorkflow(
-        body.id,
-        workflowIdN,
-        body.config,
-      );
+    const response = await this._workflowsService.addNodeToWorkflow(
+      this._authContext.user,
+      body.id,
+      workflowIdN,
+      body.previous,
+      body.label,
+      body.config,
+    );
+    if (response) {
+      return;
     } else {
-      if (!body.previous) {
-        throw new BadRequestException('Missing previous');
-      }
-      return await this._workflowsService.addNodeToWorkflow(
-        body.id,
-        workflowIdN,
-        body.previous,
-        'output',
-        body.config,
-      );
+      throw new NotFoundException('Node not found');
     }
   }
 }

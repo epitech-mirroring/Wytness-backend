@@ -11,6 +11,7 @@ import { User } from '../user';
 import { Actions, Resource } from '../permissions';
 import { WorkflowNode } from './nodes';
 import { WorkflowExecution } from './executions';
+import { NodeType } from '../services';
 
 export type WorkflowBasicInfo = {
   id: number;
@@ -102,6 +103,14 @@ export class Workflow extends Resource {
     if (this.nodes === undefined) {
       this.nodes = [];
     }
-    this.nodes.push(node);
+    if (!node.previous && node.node.type !== NodeType.TRIGGER) {
+      this.strandedNodes.push(node);
+    } else {
+      if (node.node.type === NodeType.TRIGGER) {
+        this.entrypoints.push(node);
+      } else {
+        this.nodes.push(node);
+      }
+    }
   }
 }

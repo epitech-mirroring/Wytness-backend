@@ -490,31 +490,71 @@ export class WorkflowsService implements OnModuleInit {
     return true;
   }
 
-  public async getNodes(workflowId: number): Promise<WorkflowNode[]> {
+  public async getNodes(
+    performer: User,
+    workflowId: number,
+  ): Promise<WorkflowNode[]> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return [];
+      return undefined;
     }
 
-    return workflow.nodes;
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'read',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return undefined;
+    }
+
+    const flattenNodes = (nodes: WorkflowNode[]): WorkflowNode[] => {
+      const flatNodes = [];
+      for (const node of nodes) {
+        flatNodes.push(node);
+      }
+      return flatNodes;
+    };
+
+    const nodes = flattenNodes(workflow.entrypoints);
+    nodes.push(...flattenNodes(workflow.strandedNodes));
+
+    return nodes;
   }
 
-  public async deleteNode(workflowId: number, nodeId: number): Promise<void> {
+  public async deleteNode(
+    performer: User,
+    workflowId: number,
+    nodeId: number,
+  ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return;
+      return false;
+    }
+
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'update',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return false;
     }
 
     const node = this.getNode(workflowId, nodeId);
 
     if (!node) {
-      return;
+      return false;
     }
 
     const dbNode = await this._workflowNodeRepository.delete({
@@ -522,29 +562,40 @@ export class WorkflowsService implements OnModuleInit {
     });
 
     if (!dbNode) {
-      return;
+      return false;
     }
 
     workflow.nodes = workflow.nodes.filter((node) => node.id !== nodeId);
   }
 
   public async updateNode(
+    performer: User,
     workflowId: number,
     nodeId: number,
     config: any,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
-
     if (!workflow) {
-      return;
+      return false;
+    }
+
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'update',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return false;
     }
 
     const node = this.getNode(workflowId, nodeId);
 
     if (!node) {
-      return;
+      return false;
     }
 
     const dbNode = await this._workflowNodeRepository.update(
@@ -557,77 +608,106 @@ export class WorkflowsService implements OnModuleInit {
     );
 
     if (!dbNode) {
-      return;
+      return false;
     }
 
     node.config = config;
+    return true;
   }
 
   public async addNodeToWorkflow(
+    performer: User,
     nodeId: number,
     workflowId: number,
     previousNodeId: number,
     previousNodeLabel: string,
     config: any,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return;
+      return false;
     }
 
-    const previousNode = this.getNode(workflowId, previousNodeId);
-
-    if (!previousNode) {
-      return;
+    if (
+      (previousNodeId && !previousNodeLabel) ||
+      (previousNodeLabel && !previousNodeId)
+    ) {
+      return false;
     }
 
-    const dbNode = await this._workflowNodeRepository.save({
+    if (
+      !(await this._permissionsService.can(
+        performer,
+        'update',
+        workflow.id,
+        Workflow,
+      ))
+    ) {
+      return false;
+    }
+
+    const previousNode = previousNodeId
+      ? this.getNode(workflowId, previousNodeId)
+      : undefined;
+
+    if (previousNodeId && !previousNode) {
+      console.log('No previous node found');
+      return false;
+    }
+
+    console.log({
+      parent: {
+        id: previousNodeId,
+      },
+      label: previousNodeLabel,
+    });
+
+    let dbNode: WorkflowNode = await this._workflowNodeRepository.save({
+      workflow: {
+        id: workflowId,
+      },
       node: {
         id: nodeId,
       },
       config,
+      previous: previousNodeId
+        ? {
+            parent: {
+              id: previousNodeId,
+            },
+            label: previousNodeLabel,
+          }
+        : null,
+    });
+    if (!dbNode) {
+      return false;
+    }
+
+    dbNode = await this._workflowNodeRepository.findOne({
+      where: { id: dbNode.id },
+      relations: ['node'],
     });
 
-    if (!dbNode) {
-      return;
+    for (const label of dbNode.node.labels) {
+      await this._workflowNodeNextRepository.save({
+        label,
+        parent: {
+          id: dbNode.id,
+        },
+        next: [],
+      });
     }
 
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
-    previousNode.addNext(node, previousNodeLabel);
+    if (previousNode) {
+      previousNode.addNext(node, previousNodeLabel);
+    }
     workflow.addNode(node);
-  }
-
-  public async addEntrypointToWorkflow(
-    nodeId: number,
-    workflowId: number,
-    config: any,
-  ): Promise<void> {
-    const workflow = this.workflows.find(
-      (workflow) => workflow.id === workflowId,
-    );
-
-    if (!workflow) {
-      return;
-    }
-
-    const dbNode = await this._workflowNodeRepository.save({
-      node: {
-        id: nodeId,
-      },
-      config,
-    });
-
-    if (!dbNode) {
-      return;
-    }
-
-    const node = new WorkflowNode(nodeId, config);
-    node.id = dbNode.id;
-    workflow.addEntrypoint(node);
+    return true;
   }
 
   public async findAndTriggerGlobal(data: any, nodeID: number) {
