@@ -249,6 +249,8 @@ export class ServicesController {
     @Res() response: Response,
     @Param('serviceName') serviceName: string,
     @Query('color') color?: string,
+    @Query('width') width?: string,
+    @Query('height') height?: string,
   ) {
     const service = this._servicesService.getServiceByName(serviceName);
     if (!service) {
@@ -258,6 +260,12 @@ export class ServicesController {
     let content = fs.readFileSync(file, 'utf8');
     if (color) {
       content = content.replace(/fill="#[0-9A-F]{6}"/gm, `fill="${color}"`);
+    }
+    if (width) {
+      content = content.replace(/width="(\d+)"/, `width="${width}"`);
+    }
+    if (height) {
+      content = content.replace(/height="(\d+)"/, `height="${height}"`);
     }
     response.appendHeader('Content-Type', 'image/svg+xml');
     response.send(content);
