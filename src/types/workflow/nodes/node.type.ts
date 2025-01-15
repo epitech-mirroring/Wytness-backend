@@ -65,6 +65,7 @@ export class WorkflowNode {
       next.label = label;
       this.next.push(next);
     }
+    node.previous = next;
     next.next.push(node);
   }
 }

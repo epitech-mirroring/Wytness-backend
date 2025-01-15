@@ -65,6 +65,7 @@ export class WorkflowsService implements OnModuleInit {
       for (const node of next.next) {
         let nextNode = new WorkflowNode(node.id, node.config);
         nextNode.node = node.node;
+        nextNode.previous = node.previous;
         nextNode = await this.recursiveEntrypointSetup(nextNode);
         nextNodes.push(nextNode);
       }
@@ -137,10 +138,11 @@ export class WorkflowsService implements OnModuleInit {
       workflow.id = dbWorkflow.id;
       workflow.owner = dbWorkflow.owner;
 
+      const nodes = [];
       for (const node of dbWorkflow.nodes) {
         if (node.node.type === NodeType.ACTION) {
           if (!node.previous) {
-            workflow.strandedNodes.push(node);
+            nodes.push(node);
           }
           continue;
         }
@@ -148,23 +150,21 @@ export class WorkflowsService implements OnModuleInit {
         entrypoint.node = node.node;
 
         entrypoint = await this.recursiveEntrypointSetup(entrypoint);
-
-        workflow.addEntrypoint(entrypoint);
+        nodes.push(entrypoint);
       }
 
-      const nodes = [];
       const recursiveNodeSetup = async (node: WorkflowNode) => {
-        nodes.push(node);
+        if (!node.next) {
+          node.next = [];
+        }
         for (const next of node.next) {
           for (const nextNode of next.next) {
+            nodes.push(nextNode);
             await recursiveNodeSetup(nextNode);
           }
         }
       };
-      for (const entrypoint of workflow.entrypoints) {
-        await recursiveNodeSetup(entrypoint);
-      }
-      for (const node of workflow.strandedNodes) {
+      for (const node of nodes) {
         await recursiveNodeSetup(node);
       }
       for (const node of nodes) {
@@ -396,6 +396,12 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     for (const node of workflow.entrypoints) {
+      const found = this.recursiveFindNode(node, nodeId);
+      if (found) {
+        return found;
+      }
+    }
+    for (const node of workflow.strandedNodes) {
       const found = this.recursiveFindNode(node, nodeId);
       if (found) {
         return found;
@@ -656,14 +662,37 @@ export class WorkflowsService implements OnModuleInit {
     const flattenNodes = (nodes: WorkflowNode[]): WorkflowNode[] => {
       const flatNodes = [];
       for (const node of nodes) {
-        flatNodes.push(node);
+        const dup = { ...node };
+        delete dup.previous;
+        console.log(dup);
+        flatNodes.push({
+          id: dup.id,
+          config: dup.config,
+          node: {
+            name: dup.node.name,
+            description: dup.node.description,
+            labels: dup.node.labels,
+            type: dup.node.type,
+            id: dup.node.id,
+          },
+          service: {
+            name: dup.node.service.name,
+            description: dup.node.service.description,
+            nodes: dup.node.service.nodes,
+          },
+          next: dup.next.map((next) => {
+            return {
+              label: next.label,
+              next: flattenNodes(next.next),
+            };
+          }),
+        });
       }
       return flatNodes;
     };
 
     const nodes = flattenNodes(workflow.entrypoints);
     nodes.push(...flattenNodes(workflow.strandedNodes));
-
     return nodes;
   }
 
@@ -770,11 +799,16 @@ export class WorkflowsService implements OnModuleInit {
     if (!workflow) {
       return false;
     }
-
+    const Tnode = this._servicesService.getNode(nodeId);
+    if (!Tnode) {
+      return false;
+    }
     if (
       (previousNodeId && !previousNodeLabel) ||
       (previousNodeLabel && !previousNodeId)
     ) {
+      return false;
+    } else if (previousNodeId && Tnode.type === NodeType.TRIGGER) {
       return false;
     }
 
@@ -839,6 +873,7 @@ export class WorkflowsService implements OnModuleInit {
 
       await this._workflowNodeNextRepository.save(dbNext);
     }
+    console.log(node);
     workflow.addNode(node);
     return true;
   }
