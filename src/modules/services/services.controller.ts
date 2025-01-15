@@ -226,7 +226,7 @@ export class ServicesController {
   }
 
   @Public()
-  @Get('/:serviceName/logo')
+  @Get('/:serviceName/logo.svg')
   @ApiParam({
     name: 'serviceName',
     description: 'Name of the service',

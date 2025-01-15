@@ -69,7 +69,7 @@ export class ServicesService {
               : 'https://wytness.fr') +
             '/api/services/' +
             service.name +
-            '/logo',
+            '/logo.svg',
           color: service.serviceMetadata.color,
         }) as ListService,
     );
