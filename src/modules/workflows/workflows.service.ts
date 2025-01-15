@@ -6,6 +6,7 @@ import {
   WorkflowExecutionTrace,
   WorkflowNode,
   WorkflowNodeNext,
+  WorkflowStatus,
 } from '../../types/workflow';
 import { ServicesService } from '../services/services.service';
 import { UsersService } from '../users/users.service';
@@ -137,6 +138,7 @@ export class WorkflowsService implements OnModuleInit {
       const workflow = new Workflow(dbWorkflow.name, dbWorkflow.description);
       workflow.id = dbWorkflow.id;
       workflow.owner = dbWorkflow.owner;
+      workflow.status = dbWorkflow.status;
 
       const nodes = [];
       for (const node of dbWorkflow.nodes) {
@@ -509,6 +511,7 @@ export class WorkflowsService implements OnModuleInit {
       description: workflow.description,
       ownerId: ownerId ? workflow.owner.id : null,
       serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
+      status: workflow.status,
     } as WorkflowBasicInfo;
   }
 
@@ -564,7 +567,9 @@ export class WorkflowsService implements OnModuleInit {
   public async updateWorkflow(
     performer: User,
     workflowId: number,
-    data: Partial<Omit<Workflow, 'id'>>,
+    status: string,
+    name: string,
+    description: string,
   ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -584,19 +589,41 @@ export class WorkflowsService implements OnModuleInit {
     ) {
       return false;
     }
+
+    let statusToUpdate: WorkflowStatus | undefined;
+
+    switch (status) {
+      case 'enabled':
+        statusToUpdate = WorkflowStatus.ENABLED;
+        break;
+      case 'disabled':
+        statusToUpdate = WorkflowStatus.DISABLED;
+        break;
+      case 'error':
+        statusToUpdate = WorkflowStatus.ERROR;
+        break;
+      default:
+        statusToUpdate = undefined;
+    }
+
     const dbWorkflow = await this._workflowRepository.update(
       {
         id: workflowId,
       },
-      data,
+      {
+        name,
+        description,
+        status: statusToUpdate ? statusToUpdate : workflow.status,
+      },
     );
 
     if (!dbWorkflow) {
       return false;
     }
 
-    workflow.name = data.name || workflow.name;
-    workflow.description = data.description || workflow.description;
+    workflow.name = name || workflow.name;
+    workflow.description = description || workflow.description;
+    workflow.status = statusToUpdate ? statusToUpdate : workflow.status;
     return true;
   }
 
@@ -632,6 +659,7 @@ export class WorkflowsService implements OnModuleInit {
 
     workflow.id = dbWorkflow.id;
     workflow.owner = dbWorkflow.owner;
+    workflow.status = dbWorkflow.status;
     this.workflows.push(workflow);
     return true;
   }

@@ -155,10 +155,9 @@ export class WorkflowsController {
     const workflow = await this._workflowsService.updateWorkflow(
       this._authContext.user,
       workflowIdN,
-      {
-        name: body.name,
-        description: body.description,
-      },
+      body.status,
+      body.name,
+      body.description,
     );
     if (workflow) {
       return;

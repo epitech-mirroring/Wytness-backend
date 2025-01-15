@@ -1,11 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class WorkflowCreateNodeDTO {
   @ApiProperty({
@@ -58,4 +52,12 @@ export class WorkflowCreateDTO {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @ApiProperty({
+    description: 'The status of the Workflow',
+    example: 'enabled',
+  })
+  @IsString()
+  @IsOptional()
+  status?: string;
 }

@@ -19,7 +19,14 @@ export type WorkflowBasicInfo = {
   description: string;
   ownerId?: number;
   serviceUsed: string[];
+  status: WorkflowStatus;
 };
+
+export enum WorkflowStatus {
+  ENABLED = 'enabled',
+  DISABLED = 'disabled',
+  ERROR = 'error',
+}
 
 @Entity('workflows')
 @Actions('read', 'create', 'update', 'delete')
@@ -45,6 +52,17 @@ export class Workflow extends Resource {
   })
   @Column({ nullable: true })
   description?: string;
+
+  @ApiProperty({
+    description: 'The status of the Workflow',
+    example: 'enabled',
+  })
+  @Column({
+    type: 'enum',
+    enum: WorkflowStatus,
+    default: WorkflowStatus.ENABLED,
+  })
+  status: WorkflowStatus;
 
   @ApiProperty({
     description: 'The owner of the Workflow',
