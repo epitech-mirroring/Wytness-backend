@@ -14,6 +14,7 @@ import {
 import { PermissionsService } from '../permissions/permissions.service';
 import { User } from '../../types/user';
 import { FlowControlService } from '../../services/flow_control/flow-control.service';
+import * as process from 'node:process';
 
 @Injectable()
 export class ServicesService {
@@ -62,7 +63,14 @@ export class ServicesService {
         ({
           name: service.name,
           description: service.description,
-          logo: service.logo,
+          logo:
+            (process.env.NODE_ENV === 'development'
+              ? 'http://localhost:4040'
+              : 'https://wytness.fr') +
+            '/api/services/' +
+            service.name +
+            '/logo',
+          color: service.serviceMetadata.color,
         }) as ListService,
     );
   }

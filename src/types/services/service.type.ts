@@ -20,6 +20,8 @@ export class ServiceMetadata {
   useCron: boolean;
   @Column('text', { nullable: true })
   useAuth: undefined | 'OAuth' | 'code';
+  @Column('text', { default: '#FFFFFF' })
+  color: string;
 }
 
 export type CodeFormField = {
@@ -38,8 +40,6 @@ export abstract class Service implements OnModuleInit {
   name: string;
   @Column('text')
   description: string;
-  @Column('text')
-  logo: string;
   @JoinColumn()
   @OneToMany(() => Node, (node) => node.service)
   nodes: Node[];
@@ -53,10 +53,10 @@ export abstract class Service implements OnModuleInit {
     name: string,
     description: string,
     nodes: Node[],
-    logo: string,
     serviceMetadata: ServiceMetadata = {
       useAuth: undefined,
       useCron: false,
+      color: '#FFFFFF',
     },
   ) {
     this.name = name;
@@ -65,8 +65,8 @@ export abstract class Service implements OnModuleInit {
     this.serviceMetadata = serviceMetadata || {
       useAuth: undefined,
       useCron: false,
+      color: '#FFFFFF',
     };
-    this.logo = logo;
   }
 
   @Inject('SERVICE_REPOSITORY')
@@ -87,7 +87,6 @@ export abstract class Service implements OnModuleInit {
       await this._serviceRepository.save({
         name: this.name,
         description: this.description,
-        logo: this.logo,
         serviceMetadata: this.serviceMetadata,
       });
 
@@ -187,11 +186,10 @@ export abstract class ServiceWithAuth extends Service {
     name: string,
     description: string,
     nodes: Node[],
-    logo: string,
     serviceMetadata: ServiceMetadata,
   ) {
     console.assert(serviceMetadata.useAuth);
-    super(name, description, nodes, logo, serviceMetadata);
+    super(name, description, nodes, serviceMetadata);
   }
 
   @Inject('SERVICE_USER_REPOSITORY')
@@ -209,12 +207,14 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     name: string,
     description: string,
     nodes: Node[],
-    logo: string,
     endpoint: OAuthEndpoints,
     config: OAuthConfig = OAuthDefaultConfig,
-    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = { useCron: false },
+    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = {
+      useCron: false,
+      color: '#FFFFFF',
+    },
   ) {
-    super(name, description, nodes, logo, {
+    super(name, description, nodes, {
       ...serviceMetadata,
       useAuth: 'OAuth',
     });
@@ -377,10 +377,12 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     name: string,
     description: string,
     nodes: Node[],
-    logo: string,
-    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = { useCron: false },
+    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = {
+      useCron: false,
+      color: '#FFFFFF',
+    },
   ) {
-    super(name, description, nodes, logo, {
+    super(name, description, nodes, {
       ...serviceMetadata,
       useAuth: 'code',
     });

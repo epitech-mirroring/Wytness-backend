@@ -6,7 +6,7 @@ import { DiscordMessageCreatedEvent } from './discord.type';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
 import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
-import { ServiceWithOAuth } from '../../types/services';
+import { OAuthDefaultConfig, ServiceWithOAuth } from '../../types/services';
 
 export type GatewayMessage = {
   op: number;
@@ -35,10 +35,14 @@ export class DiscordService extends ServiceWithOAuth {
       'discord',
       'Integrate Wytness with your discord servers',
       [_dmNew, _dmSend, _dmReact],
-      'https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/636e0a69f118df70ad7828d4_icon_clyde_blurple_RGB.svg',
       {
         authorize: 'https://discord.com/oauth2/authorize',
         token: 'https://discord.com/api/oauth2/token',
+      },
+      OAuthDefaultConfig,
+      {
+        color: '#5865F2',
+        useCron: false,
       },
     );
   }

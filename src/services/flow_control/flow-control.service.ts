@@ -16,11 +16,10 @@ export class FlowControlService extends Service {
     @Inject(IfAction)
     private _ifAction: IfAction,
   ) {
-    super(
-      'flow-control',
-      'Control the flow of your workflows',
-      [_ifAction],
-      'https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png',
-    );
+    super('flow-control', 'Control the flow of your workflows', [_ifAction], {
+      color: '#F2BE4E',
+      useCron: false,
+      useAuth: undefined,
+    });
   }
 }

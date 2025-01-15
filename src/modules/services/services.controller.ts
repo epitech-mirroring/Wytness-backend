@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { Private } from '../auth/decorators/private.decorator';
@@ -20,15 +21,16 @@ import {
 } from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
 import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiInternalServerErrorResponse,
+  ApiParam,
   ApiResponse,
   ApiTags,
-  ApiBody,
-  ApiParam,
-  ApiBearerAuth,
-  ApiInternalServerErrorResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
+import * as fs from 'fs';
 
 @ApiTags('Services')
 @Controller('services')
@@ -221,5 +223,39 @@ export class ServicesController {
       this._authContext.user.id,
       this._authContext.user,
     );
+  }
+
+  @Public()
+  @Get('/:serviceName/logo')
+  @ApiParam({
+    name: 'serviceName',
+    description: 'Name of the service',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service logo',
+    schema: {
+      type: 'string',
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  async getServiceLogo(
+    @Param('serviceName') serviceName: string,
+    @Query('color') color?: string,
+  ) {
+    const service = this._servicesService.getServiceByName(serviceName);
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+    const file = `assets/services/${serviceName}.svg`;
+    const content = fs.readFileSync(file, 'utf8');
+    if (color) {
+      return content.replace(/fill="#[0-9A-F]{6}"/gm, `fill="${color}"`);
+    }
+    return content;
   }
 }
