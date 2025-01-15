@@ -10,6 +10,7 @@ import {
   WorkflowNodeNext,
 } from '../../types/workflow';
 import { Code, Node, Service, ServiceUser } from '../../types/services';
+import { Webhook } from '../../types/webhook/webhook.type';
 
 export const databaseProviders = [
   {
@@ -37,6 +38,7 @@ export const databaseProviders = [
           ServiceUser,
           Code,
           WorkflowNodeNext,
+          Webhook,
         ],
         synchronize: true,
       });
