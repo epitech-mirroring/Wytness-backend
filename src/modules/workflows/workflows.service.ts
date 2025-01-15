@@ -675,12 +675,7 @@ export class WorkflowsService implements OnModuleInit {
             type: dup.node.type,
             id: dup.node.id,
           },
-          service: {
-            name: dup.node.service.name,
-            description: dup.node.service.description,
-            nodes: dup.node.service.nodes,
-          },
-          next: dup.next.map((next) => {
+          next: (dup.next ? dup.next : []).map((next) => {
             return {
               label: next.label,
               next: flattenNodes(next.next),
