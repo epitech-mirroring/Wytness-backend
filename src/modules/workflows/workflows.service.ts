@@ -48,7 +48,13 @@ export class WorkflowsService implements OnModuleInit {
   ): Promise<WorkflowNode> {
     const dbNext = await this._workflowNodeNextRepository.find({
       where: { parent: { id: initial.id } },
-      relations: ['next', 'next.previous', 'next', 'next.node'],
+      relations: [
+        'next',
+        'next.previous',
+        'next',
+        'next.node',
+        'next.node.service',
+      ],
     });
 
     const builtNext = [];
@@ -122,6 +128,7 @@ export class WorkflowsService implements OnModuleInit {
         'nodes.node',
         'nodes.previous',
         'nodes.previous.parent',
+        'nodes.node.service',
       ],
     });
 
@@ -473,11 +480,29 @@ export class WorkflowsService implements OnModuleInit {
       workflow.owner.id,
       User,
     );
+
+    const services = [];
+    const recursiveServiceSetup = async (node: WorkflowNode) => {
+      services.push(node.node.service.name);
+      for (const next of node.next) {
+        for (const nextNode of next.next) {
+          await recursiveServiceSetup(nextNode);
+        }
+      }
+    };
+    for (const node of workflow.entrypoints) {
+      await recursiveServiceSetup(node);
+    }
+    for (const node of workflow.strandedNodes) {
+      await recursiveServiceSetup(node);
+    }
+
     return {
       id: workflow.id,
       name: workflow.name,
       description: workflow.description,
       ownerId: ownerId ? workflow.owner.id : null,
+      serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
     } as WorkflowBasicInfo;
   }
 

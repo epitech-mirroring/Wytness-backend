@@ -18,6 +18,7 @@ export type WorkflowBasicInfo = {
   name: string;
   description: string;
   ownerId?: number;
+  serviceUsed: string[];
 };
 
 @Entity('workflows')
