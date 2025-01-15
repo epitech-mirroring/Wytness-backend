@@ -9,6 +9,7 @@ import {
   Param,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { Private } from '../auth/decorators/private.decorator';
@@ -31,6 +32,7 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import * as fs from 'fs';
+import { Response } from 'express';
 
 @ApiTags('Services')
 @Controller('services')
@@ -226,7 +228,7 @@ export class ServicesController {
   }
 
   @Public()
-  @Get('/:serviceName/logo')
+  @Get('/:serviceName/logo.svg')
   @ApiParam({
     name: 'serviceName',
     description: 'Name of the service',
@@ -244,18 +246,28 @@ export class ServicesController {
     description: 'Service not found',
   })
   async getServiceLogo(
+    @Res() response: Response,
     @Param('serviceName') serviceName: string,
     @Query('color') color?: string,
+    @Query('width') width?: string,
+    @Query('height') height?: string,
   ) {
     const service = this._servicesService.getServiceByName(serviceName);
     if (!service) {
       throw new NotFoundException('Service not found');
     }
     const file = `assets/services/${serviceName}.svg`;
-    const content = fs.readFileSync(file, 'utf8');
+    let content = fs.readFileSync(file, 'utf8');
     if (color) {
-      return content.replace(/fill="#[0-9A-F]{6}"/gm, `fill="${color}"`);
+      content = content.replace(/fill="#[0-9A-F]{6}"/gm, `fill="${color}"`);
     }
-    return content;
+    if (width) {
+      content = content.replace(/width="(\d+)"/, `width="${width}"`);
+    }
+    if (height) {
+      content = content.replace(/height="(\d+)"/, `height="${height}"`);
+    }
+    response.appendHeader('Content-Type', 'image/svg+xml');
+    response.send(content);
   }
 }
