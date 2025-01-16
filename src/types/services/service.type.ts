@@ -298,7 +298,6 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     { code, state }: ServiceConnectDTO,
     user: User,
   ): Promise<void> {
-    console.log('onOAuthCallback', code, state, this.codeVerifiers);
     if (!this.codeVerifiers[state]) {
       throw new Error('Invalid state');
     }
@@ -340,6 +339,65 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     delete this.codeVerifiers[state];
 
     this.afterLogin(user);
+  }
+
+  public async refreshAccessToken(userId: number): Promise<void> {
+    const serviceUser = await this._serviceUserRepository.findOne({
+      where: {
+        user: {
+          id: userId,
+        },
+        service: {
+          name: this.getName(),
+        },
+      },
+    });
+
+    if (!serviceUser) {
+      throw new Error('User is not connected to this service');
+    }
+
+    const customData = serviceUser.customData as {
+      refreshToken: string;
+    };
+
+    const bodyContent: any = {};
+    bodyContent[this.config.clientId] = this.getClientId();
+    bodyContent['client_secret'] = this.getClientSecret();
+    bodyContent['refresh_token'] = customData.refreshToken;
+    bodyContent['grant_type'] = 'refresh_token';
+    bodyContent['redirect_uri'] = this.getRedirectUri();
+    bodyContent[this.config.scopes] = this.getScopes().join(' ');
+
+    const result = await fetch(this.endpoints.token, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${btoa(`${this.getClientId()}:${this.getClientSecret()}`)}`,
+      },
+      body: new URLSearchParams(bodyContent).toString(),
+    });
+
+    if (!result.ok) {
+      this.error('Failed to fetch token', await result.text());
+      throw new Error('Failed to fetch token');
+    }
+
+    const data = await result.json();
+
+    await this._serviceUserRepository.update(
+      {
+        user: {
+          id: userId,
+        },
+        service: {
+          name: this.getName(),
+        },
+      },
+      {
+        customData: this.parseTokenResponse(data),
+      },
+    );
   }
 
   public async buildOAuthUrl(userId: number): Promise<string> {
@@ -409,6 +467,10 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
       },
     });
     if (!result.ok) {
+      if (result.status === 401) {
+        await this.refreshAccessToken(user.id);
+        return this.fetchWithOAuth(user, trace, url, options);
+      }
       this.error(result.status);
       throw new Error('Failed to fetch data');
     }
