@@ -119,7 +119,7 @@ export abstract class Node {
     workflowExecution: WorkflowExecution,
     parentTraceUUID: string | null,
   ): Promise<void> {
-    if (workflowExecution.status === WorkflowExecutionStatus.FAILED) {
+    if (workflowExecution.status !== WorkflowExecutionStatus.RUNNING) {
       return;
     }
     const [result, traceUUID] = await this.run(
@@ -130,8 +130,7 @@ export abstract class Node {
       parentTraceUUID,
     );
     if (
-      // @ts-expect-error This is a valid check
-      workflowExecution.status === WorkflowExecutionStatus.FAILED ||
+      workflowExecution.status !== WorkflowExecutionStatus.RUNNING ||
       result === null
     ) {
       return;
