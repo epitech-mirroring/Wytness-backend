@@ -76,6 +76,10 @@ export class WorkflowExecutionTrace {
     };
   }
 
+  public setCurrentData(data: any): void {
+    this.data[`[${this.index}]`] = data;
+  }
+
   getData() {
     return this.data;
   }
