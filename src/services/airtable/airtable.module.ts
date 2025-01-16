@@ -9,6 +9,8 @@ import {
   serviceUserProviders,
 } from '../../providers/database/providers/service.providers';
 import { AirtableService } from './airtable.service';
+import { ListRecordsAction } from './nodes/actions/records/list-records.action';
+import { ListBasesAction } from './nodes/actions/bases/list-bases.action';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { AirtableService } from './airtable.service';
     ...serviceProviders,
     ...serviceUserProviders,
     ...serviceNodeProviders,
+    ListRecordsAction,
+    ListBasesAction,
   ],
   exports: [AirtableService],
 })

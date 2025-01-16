@@ -2,6 +2,8 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { OAuthDefaultConfig, ServiceWithOAuth } from '../../types/services';
+import { ListRecordsAction } from './nodes/actions/records/list-records.action';
+import { ListBasesAction } from './nodes/actions/bases/list-bases.action';
 
 @Injectable()
 export class AirtableService extends ServiceWithOAuth {
@@ -11,11 +13,16 @@ export class AirtableService extends ServiceWithOAuth {
   @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
 
-  constructor() {
+  constructor(
+    @Inject()
+    private readonly _listRecordsAction: ListRecordsAction,
+    @Inject()
+    private readonly _listBasesAction: ListBasesAction,
+  ) {
     super(
       'airtable',
       'Airtable - Manage databases with a spreadsheet interface',
-      [],
+      [_listRecordsAction, _listBasesAction],
       {
         token: 'https://airtable.com/oauth2/v1/token',
         authorize: 'https://airtable.com/oauth2/v1/authorize',
