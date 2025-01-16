@@ -160,11 +160,10 @@ export class WorkflowsController {
       body.name,
       body.description,
     );
-    if (workflow) {
-      return;
-    } else {
-      throw new NotFoundException('Workflow not found');
+    if ('error' in workflow) {
+      throw new BadRequestException(workflow.error);
     }
+    return this._workflowsService.workflowToJsonObject(workflow);
   }
 
   @Private()
@@ -183,11 +182,10 @@ export class WorkflowsController {
       body.name,
       body.description,
     );
-    if (created) {
-      return;
-    } else {
-      throw new ForbiddenException('Not authorized');
+    if ('error' in created) {
+      throw new BadRequestException(created.error);
     }
+    return this._workflowsService.workflowToJsonObject(created);
   }
 
   @Private()
@@ -302,11 +300,10 @@ export class WorkflowsController {
       body.label,
       body.position,
     );
-    if (response) {
-      return;
-    } else {
-      throw new NotFoundException('Node not found');
+    if ('error' in response) {
+      throw new BadRequestException(response.error);
     }
+    return this._workflowsService.nodeToJsonObject(response);
   }
 
   @Private()
@@ -342,10 +339,9 @@ export class WorkflowsController {
       body.config,
       body.position,
     );
-    if (response) {
-      return;
-    } else {
-      throw new NotFoundException('Node not found');
+    if ('error' in response) {
+      throw new BadRequestException(response.error);
     }
+    return this._workflowsService.nodeToJsonObject(response);
   }
 }
