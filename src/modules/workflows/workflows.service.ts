@@ -957,6 +957,10 @@ export class WorkflowsService implements OnModuleInit {
       node: {
         id: nodeId,
       },
+      next: Tnode.labels.map((label) => ({
+        label,
+        next: [],
+      })),
       config,
       position: position || { x: 100, y: 100 },
     });
@@ -964,9 +968,11 @@ export class WorkflowsService implements OnModuleInit {
       return { error: 'Could not save node' };
     }
 
+    const dbNodeNext = dbNode.next;
+
     dbNode = await this._workflowNodeRepository.findOne({
       where: { id: dbNode.id },
-      relations: ['node'],
+      relations: ['node', 'next'],
     });
 
     for (const label of dbNode.node.labels) {
@@ -975,18 +981,14 @@ export class WorkflowsService implements OnModuleInit {
         parent: {
           id: dbNode.id,
         },
-        next: [
-          {
-            label,
-            next: [],
-          },
-        ],
+        next: [],
       });
     }
 
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
     node.position = dbNode.position;
+    node.next = dbNodeNext;
     if (previousNode) {
       previousNode.addNext(node, previousNodeLabel);
 
