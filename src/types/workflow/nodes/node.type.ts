@@ -28,6 +28,8 @@ export class WorkflowNode {
     (workflowNodePrevious) => workflowNodePrevious.next,
     {
       nullable: true,
+      cascade: true,
+      onDelete: 'SET NULL',
     },
   )
   previous?: WorkflowNodeNext;
@@ -53,6 +55,9 @@ export class WorkflowNode {
       throw new Error('Invalid label');
     }
     let next = null;
+    if (this.next === undefined) {
+      this.next = [];
+    }
     for (const n of this.next) {
       if (n.label === label) {
         next = n;
@@ -64,6 +69,10 @@ export class WorkflowNode {
       next.parent = this;
       next.label = label;
       this.next.push(next);
+    }
+    node.previous = next;
+    if (next.next === undefined) {
+      next.next = [];
     }
     next.next.push(node);
   }

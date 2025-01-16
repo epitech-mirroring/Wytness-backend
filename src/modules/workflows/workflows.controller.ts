@@ -155,10 +155,9 @@ export class WorkflowsController {
     const workflow = await this._workflowsService.updateWorkflow(
       this._authContext.user,
       workflowIdN,
-      {
-        name: body.name,
-        description: body.description,
-      },
+      body.status,
+      body.name,
+      body.description,
     );
     if (workflow) {
       return;
@@ -248,11 +247,15 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid nodeId');
     }
 
-    return await this._workflowsService.deleteNode(
+    const response = await this._workflowsService.deleteNode(
       this._authContext.user,
       workflowIdN,
       nodeIdN,
     );
+    if (response) {
+      return;
+    }
+    throw new NotFoundException('Node not found');
   }
 
   @Private()
@@ -278,7 +281,7 @@ export class WorkflowsController {
   async updateNode(
     @Param('workflowId') workflowId: string,
     @Param('nodeId') nodeId: string,
-    @Body() body: WorkflowCreateNodeDTO,
+    @Body() body: Partial<WorkflowCreateNodeDTO>,
   ) {
     const workflowIdN = parseInt(workflowId);
     if (isNaN(workflowIdN)) {
@@ -289,13 +292,19 @@ export class WorkflowsController {
     if (isNaN(nodeIdN)) {
       throw new BadRequestException('Invalid nodeId');
     }
-
-    return await this._workflowsService.updateNode(
+    const response = await this._workflowsService.updateNode(
       this._authContext.user,
       workflowIdN,
       nodeIdN,
       body.config,
+      body.previous,
+      body.label,
     );
+    if (response) {
+      return;
+    } else {
+      throw new NotFoundException('Node not found');
+    }
   }
 
   @Private()
