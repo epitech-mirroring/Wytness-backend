@@ -376,6 +376,9 @@ export class WorkflowsService implements OnModuleInit {
     if (node.id === nodeId) {
       return node;
     }
+    if (!node.next) {
+      node.next = [];
+    }
 
     for (const next of node.next) {
       for (const n of next.next) {
@@ -692,7 +695,6 @@ export class WorkflowsService implements OnModuleInit {
       for (const node of nodes) {
         const dup = { ...node };
         delete dup.previous;
-        console.log(dup);
         flatNodes.push({
           id: dup.id,
           config: dup.config,
@@ -727,6 +729,9 @@ export class WorkflowsService implements OnModuleInit {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
+    console.log(workflow.nodes);
+    console.log('entryyyyy', workflow.entrypoints);
+    console.log('ouiiiii', workflow.strandedNodes);
 
     if (!workflow) {
       return false;
@@ -757,7 +762,36 @@ export class WorkflowsService implements OnModuleInit {
       return false;
     }
 
+    const dbNext = await this._workflowNodeNextRepository.find({
+      where: { parent: { id: nodeId } },
+    });
+
+    for (const next of dbNext) {
+      await this._workflowNodeNextRepository.delete({ id: next.id });
+    }
+
     workflow.nodes = workflow.nodes.filter((node) => node.id !== nodeId);
+    workflow.entrypoints = workflow.entrypoints.filter(
+      (node) => node.id !== nodeId,
+    );
+    if (node.next.length > 0) {
+      for (const nextNode of node.next) {
+        for (const next of nextNode.next) {
+          workflow.strandedNodes.push(next);
+          workflow.nodes = workflow.nodes.filter((node) => node.id !== next.id);
+        }
+      }
+    }
+    for (const entrypoint of workflow.entrypoints) {
+      for (const next of entrypoint.next) {
+        next.next = next.next.filter((node) => node.id !== nodeId);
+      }
+    }
+    workflow.strandedNodes = workflow.strandedNodes.filter(
+      (node) => node.id !== nodeId,
+    );
+
+    return true;
   }
 
   public async updateNode(
@@ -896,7 +930,6 @@ export class WorkflowsService implements OnModuleInit {
 
       await this._workflowNodeNextRepository.save(dbNext);
     }
-    console.log(node);
     workflow.addNode(node);
     return true;
   }

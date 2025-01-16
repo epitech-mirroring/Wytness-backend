@@ -247,11 +247,15 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid nodeId');
     }
 
-    return await this._workflowsService.deleteNode(
+    const response = await this._workflowsService.deleteNode(
       this._authContext.user,
       workflowIdN,
       nodeIdN,
     );
+    if (response) {
+      return;
+    }
+    throw new NotFoundException('Node not found');
   }
 
   @Private()
