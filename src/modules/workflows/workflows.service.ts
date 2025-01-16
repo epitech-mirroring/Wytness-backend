@@ -685,10 +685,6 @@ export class WorkflowsService implements OnModuleInit {
       id: node.id,
       config: node.config,
       node: {
-        name: node.node.name,
-        description: node.node.description,
-        labels: node.node.labels,
-        type: node.node.type,
         id: node.node.id,
       },
       next: (node.next ? node.next : []).map((next) => {
