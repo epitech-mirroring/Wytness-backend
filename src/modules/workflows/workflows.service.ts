@@ -744,6 +744,10 @@ export class WorkflowsService implements OnModuleInit {
       return false;
     }
 
+    console.log('workflowNodes', workflow.nodes);
+    console.log('workflowEntryPoints', workflow.entrypoints);
+    console.log('workflowNodes', workflow.nodes);
+
     if (
       !(await this._permissionsService.can(
         performer,
@@ -978,7 +982,12 @@ export class WorkflowsService implements OnModuleInit {
         parent: {
           id: dbNode.id,
         },
-        next: [],
+        next: [
+          {
+            label,
+            next: [],
+          },
+        ],
       });
     }
 
