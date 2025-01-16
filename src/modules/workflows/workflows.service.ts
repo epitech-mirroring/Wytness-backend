@@ -67,6 +67,7 @@ export class WorkflowsService implements OnModuleInit {
         let nextNode = new WorkflowNode(node.id, node.config);
         nextNode.node = node.node;
         nextNode.previous = node.previous;
+        nextNode.position = node.position;
         nextNode = await this.recursiveEntrypointSetup(nextNode);
         nextNodes.push(nextNode);
       }
@@ -150,6 +151,7 @@ export class WorkflowsService implements OnModuleInit {
         }
         let entrypoint = new WorkflowNode(node.id, node.config);
         entrypoint.node = node.node;
+        entrypoint.position = node.position;
 
         entrypoint = await this.recursiveEntrypointSetup(entrypoint);
         nodes.push(entrypoint);
@@ -466,6 +468,33 @@ export class WorkflowsService implements OnModuleInit {
     }
   }
 
+  public async workflowToJsonObject(workflow: Workflow): Promise<any> {
+    const services = [];
+    const recursiveServiceSetup = async (node: WorkflowNode) => {
+      services.push(node.node.service.name);
+      for (const next of node.next) {
+        for (const nextNode of next.next) {
+          await recursiveServiceSetup(nextNode);
+        }
+      }
+    };
+    for (const node of workflow.entrypoints) {
+      await recursiveServiceSetup(node);
+    }
+    for (const node of workflow.strandedNodes) {
+      await recursiveServiceSetup(node);
+    }
+
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      description: workflow.description,
+      ownerId: workflow.owner.id,
+      serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
+      status: workflow.status,
+    } as WorkflowBasicInfo;
+  }
+
   public async getWorkflow(
     performer: User,
     workflowId: number,
@@ -495,30 +524,11 @@ export class WorkflowsService implements OnModuleInit {
       User,
     );
 
-    const services = [];
-    const recursiveServiceSetup = async (node: WorkflowNode) => {
-      services.push(node.node.service.name);
-      for (const next of node.next) {
-        for (const nextNode of next.next) {
-          await recursiveServiceSetup(nextNode);
-        }
-      }
-    };
-    for (const node of workflow.entrypoints) {
-      await recursiveServiceSetup(node);
-    }
-    for (const node of workflow.strandedNodes) {
-      await recursiveServiceSetup(node);
+    if (!ownerId) {
+      return;
     }
 
-    return {
-      id: workflow.id,
-      name: workflow.name,
-      description: workflow.description,
-      ownerId: ownerId ? workflow.owner.id : null,
-      serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
-      status: workflow.status,
-    } as WorkflowBasicInfo;
+    return this.workflowToJsonObject(workflow);
   }
 
   public async deleteWorkflow(
@@ -576,13 +586,13 @@ export class WorkflowsService implements OnModuleInit {
     status: string,
     name: string,
     description: string,
-  ): Promise<boolean> {
+  ): Promise<Workflow | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return false;
+      return { error: 'Workflow not found' };
     }
 
     if (
@@ -593,7 +603,7 @@ export class WorkflowsService implements OnModuleInit {
         Workflow,
       ))
     ) {
-      return false;
+      return { error: 'Permission denied' };
     }
 
     let statusToUpdate: WorkflowStatus | undefined;
@@ -624,24 +634,24 @@ export class WorkflowsService implements OnModuleInit {
     );
 
     if (!dbWorkflow) {
-      return false;
+      return { error: 'Could not update workflow' };
     }
 
     workflow.name = name || workflow.name;
     workflow.description = description || workflow.description;
     workflow.status = statusToUpdate ? statusToUpdate : workflow.status;
-    return true;
+    return workflow;
   }
 
   public async createWorkflow(
     performer: User,
     name: string,
     description: string,
-  ): Promise<boolean> {
+  ): Promise<Workflow | { error: string }> {
     if (
       !(await this._permissionsService.can(performer, 'create', null, Workflow))
     ) {
-      return false;
+      return { error: 'Permission denied' };
     }
     const workflow = new Workflow(name, description);
     const workflowId = (
@@ -660,14 +670,35 @@ export class WorkflowsService implements OnModuleInit {
     });
 
     if (!dbWorkflow) {
-      return false;
+      return { error: 'Could not save workflow' };
     }
 
     workflow.id = dbWorkflow.id;
     workflow.owner = dbWorkflow.owner;
     workflow.status = dbWorkflow.status;
     this.workflows.push(workflow);
-    return true;
+    return workflow;
+  }
+
+  public nodeToJsonObject(node: WorkflowNode): any {
+    return {
+      id: node.id,
+      config: node.config,
+      node: {
+        name: node.node.name,
+        description: node.node.description,
+        labels: node.node.labels,
+        type: node.node.type,
+        id: node.node.id,
+      },
+      next: (node.next ? node.next : []).map((next) => {
+        return {
+          label: next.label,
+          next: next.next.map((node) => this.nodeToJsonObject(node)),
+        };
+      }),
+      position: node.position,
+    };
   }
 
   public async getNodes(
@@ -696,25 +727,7 @@ export class WorkflowsService implements OnModuleInit {
     const flattenNodes = (nodes: WorkflowNode[]): WorkflowNode[] => {
       const flatNodes = [];
       for (const node of nodes) {
-        const dup = { ...node };
-        delete dup.previous;
-        flatNodes.push({
-          id: dup.id,
-          config: dup.config,
-          node: {
-            name: dup.node.name,
-            description: dup.node.description,
-            labels: dup.node.labels,
-            type: dup.node.type,
-            id: dup.node.id,
-          },
-          next: (dup.next ? dup.next : []).map((next) => {
-            return {
-              label: next.label,
-              next: flattenNodes(next.next),
-            };
-          }),
-        });
+        flatNodes.push(this.nodeToJsonObject(node));
       }
       return flatNodes;
     };
@@ -801,12 +814,13 @@ export class WorkflowsService implements OnModuleInit {
     config?: any,
     previousNodeId?: number | null,
     label?: string,
-  ): Promise<boolean> {
+    position?: { x: number; y: number },
+  ): Promise<WorkflowNode | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
     if (!workflow) {
-      return false;
+      return { error: 'Workflow not found' };
     }
 
     if (
@@ -817,13 +831,13 @@ export class WorkflowsService implements OnModuleInit {
         Workflow,
       ))
     ) {
-      return false;
+      return { error: 'Permission denied' };
     }
 
     const node = this.getNode(workflowId, nodeId);
 
     if (!node) {
-      return false;
+      return { error: 'Node not found' };
     }
 
     const oldLabel = node.previous ? node.previous.label : undefined;
@@ -862,11 +876,10 @@ export class WorkflowsService implements OnModuleInit {
       const labelA = label || oldLabel;
       const previous = this.getNode(workflowId, previousNodeId);
       if (!previous) {
-        return false;
+        return { error: 'Previous node not found' };
       }
       if (!previous.node.labels.includes(labelA)) {
-        console.error('No previous node found', labelA);
-        return false;
+        return { error: 'Invalid label' };
       }
       previous.addNext(this.getNode(workflowId, nodeId), labelA);
       await this._workflowNodeRepository.update(
@@ -883,7 +896,19 @@ export class WorkflowsService implements OnModuleInit {
       node.previous = previous.next.find((n) => n.label === labelA);
     }
 
-    return true;
+    if (position) {
+      await this._workflowNodeRepository.update(
+        {
+          id: nodeId,
+        },
+        {
+          position,
+        },
+      );
+      node.position = position;
+    }
+
+    return node;
   }
 
   public async addNodeToWorkflow(
@@ -893,25 +918,26 @@ export class WorkflowsService implements OnModuleInit {
     previousNodeId: number,
     previousNodeLabel: string,
     config: any,
-  ): Promise<boolean> {
+    position?: { x: number; y: number },
+  ): Promise<WorkflowNode | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return false;
+      return { error: 'Workflow not found' };
     }
     const Tnode = this._servicesService.getNode(nodeId);
     if (!Tnode) {
-      return false;
+      return { error: 'Node not found' };
     }
     if (
       (previousNodeId && !previousNodeLabel) ||
       (previousNodeLabel && !previousNodeId)
     ) {
-      return false;
+      return { error: 'Previous node id and label must come together' };
     } else if (previousNodeId && Tnode.type === NodeType.TRIGGER) {
-      return false;
+      return { error: 'Trigger nodes cannot have previous nodes' };
     }
 
     if (
@@ -922,7 +948,7 @@ export class WorkflowsService implements OnModuleInit {
         Workflow,
       ))
     ) {
-      return false;
+      return { error: 'Permission denied' };
     }
 
     const previousNode = previousNodeId
@@ -930,7 +956,7 @@ export class WorkflowsService implements OnModuleInit {
       : undefined;
 
     if (previousNodeId && !previousNode) {
-      return false;
+      return { error: 'Previous node not found' };
     }
 
     let dbNode: WorkflowNode = await this._workflowNodeRepository.save({
@@ -941,9 +967,10 @@ export class WorkflowsService implements OnModuleInit {
         id: nodeId,
       },
       config,
+      position: position || { x: 100, y: 100 },
     });
     if (!dbNode) {
-      return false;
+      return { error: 'Could not save node' };
     }
 
     dbNode = await this._workflowNodeRepository.findOne({
@@ -963,6 +990,7 @@ export class WorkflowsService implements OnModuleInit {
 
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
+    node.position = dbNode.position;
     if (previousNode) {
       previousNode.addNext(node, previousNodeLabel);
 
@@ -977,7 +1005,7 @@ export class WorkflowsService implements OnModuleInit {
       await this._workflowNodeNextRepository.save(dbNext);
     }
     workflow.addNode(node);
-    return true;
+    return node;
   }
 
   public async findAndTriggerGlobal(data: any, nodeID: number) {
