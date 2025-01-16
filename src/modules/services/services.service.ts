@@ -142,4 +142,19 @@ export class ServicesService {
       service.nodes.some((node) => node.id === nodeId),
     );
   }
+
+  public async disconnectService(
+    userId: number,
+    serviceName: string,
+  ): Promise<boolean> {
+    const service = this.getServiceByName(serviceName);
+    if (!service) {
+      throw new Error('Service not found');
+    }
+    if (service.serviceMetadata.useAuth) {
+      const withAuth = service as ServiceWithAuth;
+      return await withAuth.disconnectUser(userId);
+    }
+    return false;
+  }
 }
