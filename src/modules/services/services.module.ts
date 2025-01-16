@@ -1,18 +1,19 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { ServicesController } from './services.controller';
-import { PrismaModule } from '../../providers/prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { DiscordModule } from '../../services/discord/discord.module';
 import { SpotifyModule } from '../../services/spotify/spotify.module';
-
+import { PermissionsModule } from '../permissions/permissions.module';
+import { FlowControlModule } from '../../services/flow_control/flow-control.module';
 
 @Module({
   imports: [
-    PrismaModule,
     AuthModule,
+    PermissionsModule,
     forwardRef(() => DiscordModule),
     forwardRef(() => SpotifyModule),
+    forwardRef(() => FlowControlModule),
   ],
   providers: [ServicesService],
   controllers: [ServicesController],

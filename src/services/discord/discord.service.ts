@@ -6,7 +6,7 @@ import { DiscordMessageCreatedEvent } from './discord.type';
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
 import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
-import { ServiceWithOAuth } from '../../types/services';
+import { OAuthDefaultConfig, ServiceWithOAuth } from '../../types/services';
 
 export type GatewayMessage = {
   op: number;
@@ -35,10 +35,14 @@ export class DiscordService extends ServiceWithOAuth {
       'discord',
       'Integrate Wytness with your discord servers',
       [_dmNew, _dmSend, _dmReact],
-      "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/636e0a69f118df70ad7828d4_icon_clyde_blurple_RGB.svg",
       {
         authorize: 'https://discord.com/oauth2/authorize',
         token: 'https://discord.com/api/oauth2/token',
+      },
+      OAuthDefaultConfig,
+      {
+        color: '#5865F2',
+        useCron: false,
       },
     );
   }
@@ -118,7 +122,11 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.t === 'READY') {
           this.ready = true;
         } else {
-          this.handleEvent(message).then().catch(this.error);
+          this.handleEvent(message)
+            .then()
+            .catch((message) => {
+              this.error(message);
+            });
         }
         break;
       default:
@@ -134,11 +142,7 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.author.bot) {
           return;
         }
-        await this._w.findAndTrigger(message, (entrypoint) => {
-          if (entrypoint.nodeID === this._dmNew.id) {
-            return entrypoint.config.channelId === message.channel_id;
-          }
-        });
+        await this._w.findAndTriggerGlobal(message, this._dmNew.id);
         break;
       default:
         this.warn('Unhandled discord event', event);

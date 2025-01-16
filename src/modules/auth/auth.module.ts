@@ -1,13 +1,21 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { UsersModule } from '../users/users.module';
 import { FirebaseModule } from 'src/providers/firebase/firebase.module';
 import { AuthContext } from './auth.context';
+import { DatabaseModule } from '../../providers/database/database.module';
+import { userProviders } from '../../providers/database/providers/user.providers';
+import { PermissionsModule } from '../permissions/permissions.module';
+import { RequestScopeModule } from 'nj-request-scope';
 
 @Module({
-  imports: [forwardRef(() => UsersModule), FirebaseModule],
-  providers: [AuthService, AuthContext],
+  imports: [
+    FirebaseModule,
+    DatabaseModule,
+    PermissionsModule,
+    RequestScopeModule,
+  ],
+  providers: [AuthService, AuthContext, ...userProviders],
   controllers: [AuthController],
   exports: [AuthContext, AuthService],
 })

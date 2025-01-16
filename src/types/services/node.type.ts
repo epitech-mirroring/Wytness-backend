@@ -2,6 +2,18 @@ import { User } from '../user';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { Service } from './service.type';
 import { Field } from './field.type';
+import {
+  WorkflowExecution,
+  WorkflowExecutionStatus,
+  WorkflowExecutionTrace,
+} from '../workflow';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 export enum NodeType {
   TRIGGER = 'trigger',
@@ -11,19 +23,77 @@ export enum NodeType {
 export interface MinimalConfig {
   user: User;
   _workflowId: number;
-  _next: number[];
+  _next: { [key: string]: number[] };
 }
 
+@Entity('nodes')
 export abstract class Node {
+  @PrimaryGeneratedColumn()
   public id: number;
-  private readonly name: string;
-  private readonly description: string;
-  public readonly type: NodeType;
+  @Column('text')
+  public name: string;
+  @Column('text', { nullable: true })
+  public description?: string;
+  @Column({
+    type: 'enum',
+    enum: NodeType,
+    default: NodeType.ACTION,
+  })
+  public type: NodeType;
+  @JoinColumn()
+  @ManyToOne(() => Service, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  public service: Service;
+
+  @Column('text', { array: true, nullable: true })
+  public labels: string[];
+
   private readonly fields: Field[] = [];
 
-  protected constructor(name: string, description: string, type: NodeType, fields: Field[] = []) {
+  protected fetch = async (
+    trace: WorkflowExecutionTrace,
+    url: string,
+    options?: RequestInit,
+  ): Promise<Response> => {
+    let sentSize = 0;
+    if (options) {
+      for (const key in options.headers) {
+        sentSize += key.length + options.headers[key].length;
+      }
+      if (options.body) {
+        if (typeof options.body === 'string') {
+          sentSize += options.body.length;
+        } else {
+          sentSize += JSON.stringify(options.body).length;
+        }
+      }
+    }
+    const response = await fetch(url, options).then((response) => {
+      trace.statistics.dataUsed.upload += sentSize;
+      return response;
+    });
+    const duplicate = response.clone();
+    const body = await duplicate.text();
+    let receivedSize = body.length;
+    for (const key in response.headers) {
+      receivedSize += key.length + response.headers[key].length;
+    }
+    trace.statistics.dataUsed.download += receivedSize;
+    return response;
+  };
+
+  protected constructor(
+    name: string,
+    description: string,
+    labels: string[] = ['output'],
+    type: NodeType,
+    fields: Field[] = [],
+  ) {
     this.name = name;
     this.description = description;
+    this.labels = labels;
     this.type = type;
     this.fields = fields;
   }
@@ -42,14 +112,50 @@ export abstract class Node {
 
   public abstract getWorkflowService(): WorkflowsService;
 
-  public async _run(data: any, config: MinimalConfig & any) {
-    const r = await this.run(data, config);
-    for (const next of config._next) {
-      await this.getWorkflowService().runNode(next, r);
+  public async _run(
+    label: string,
+    data: any,
+    config: MinimalConfig & any,
+    workflowExecution: WorkflowExecution,
+    parentTraceUUID: string | null,
+  ): Promise<void> {
+    if (workflowExecution.status === WorkflowExecutionStatus.FAILED) {
+      return;
+    }
+    const [result, traceUUID] = await this.run(
+      label,
+      data,
+      config,
+      workflowExecution,
+      parentTraceUUID,
+    );
+    if (
+      // @ts-expect-error This is a valid check
+      workflowExecution.status === WorkflowExecutionStatus.FAILED ||
+      result === null
+    ) {
+      return;
+    }
+    for (const next of config._next[label]) {
+      await this.getWorkflowService().runNode(
+        next,
+        result,
+        workflowExecution,
+        traceUUID,
+      );
+    }
+    if (parentTraceUUID === null) {
+      workflowExecution.end(true);
     }
   }
 
-  public abstract run(data: any, config: MinimalConfig & any): Promise<any>;
+  public abstract run(
+    outputLabel: string,
+    data: any,
+    config: MinimalConfig & any,
+    workflowExecution: WorkflowExecution,
+    parentTraceUUID: string | null,
+  ): Promise<[any | null, string | null]>;
 
   protected getService(): Service {
     return this.getWorkflowService().getServices().getServiceFromNode(this.id);
@@ -65,7 +171,11 @@ export abstract class Node {
     );
   }
 
-  protected error(msg: any, ...args: any[]): void {
+  protected error(
+    trace: WorkflowExecutionTrace,
+    msg: any,
+    ...args: any[]
+  ): void {
     const serviceName =
       this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
     console.error(
@@ -73,9 +183,14 @@ export abstract class Node {
       msg,
       ...args,
     );
+    trace.errors.push(msg);
   }
 
-  protected warn(msg: any, ...args: any[]): void {
+  protected warn(
+    trace: WorkflowExecutionTrace,
+    msg: any,
+    ...args: any[]
+  ): void {
     const serviceName =
       this.getService().name[0].toUpperCase() + this.getService().name.slice(1);
     console.warn(
@@ -83,6 +198,7 @@ export abstract class Node {
       msg,
       ...args,
     );
+    trace.warnings.push(msg);
   }
 
   protected debug(msg: any, ...args: any[]): void {

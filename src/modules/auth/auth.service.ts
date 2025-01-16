@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../../providers/firebase/firebase.service';
 import {
   createUserWithEmailAndPassword,
@@ -8,16 +7,23 @@ import {
 import { Request } from 'express';
 import { AuthContext } from './auth.context';
 import { TokenPayload } from '../../types/auth';
+import { Repository } from 'typeorm';
+import { User } from '../../types/user';
+import { PermissionsService } from '../permissions/permissions.service';
+import * as process from 'node:process';
 
 @Injectable()
 export class AuthService {
   @Inject()
   private _authContext: AuthContext;
 
-  constructor(
-    private usersService: UsersService,
-    private firebaseService: FirebaseService,
-  ) {}
+  @Inject('USER_REPOSITORY')
+  private _userRepository: Repository<User>;
+
+  @Inject()
+  private _permissionsService: PermissionsService;
+
+  constructor(private firebaseService: FirebaseService) {}
 
   async validateToken(token: string): Promise<boolean> {
     const decodedToken = await this.firebaseService
@@ -63,15 +69,28 @@ export class AuthService {
       .catch((error) => {
         return error.message;
       });
+    let result: { token: string; debug?: string } | { error: string };
     if (typeof user === 'object') {
-      return {
+      result = {
         token: await this.firebaseService
           .getApp()
           .auth()
           .createCustomToken(user.uid),
-      };
+        debug: undefined,
+      } as { token: string; debug?: string };
+    } else {
+      result = { error: user } as { error: string };
     }
-    return { error: user };
+    if ('error' in result) {
+      return result;
+    }
+    if (process.env.NODE_ENV === 'development') {
+      result.debug = await this.firebaseService
+        .getAuth()
+        .currentUser.getIdToken();
+    }
+    await this.firebaseService.getAuth().signOut();
+    return result;
   }
 
   async register(
@@ -94,19 +113,36 @@ export class AuthService {
     if (typeof user === 'string') {
       return { error: user };
     }
-    const userExists = await this.usersService.getUserByEmail(email);
+    const userExists = !!(await this._userRepository.findOne({
+      where: { email },
+    }));
     if (userExists) {
       return {
         error: 'PostgreSQL: Error (user already exists with that email)',
       };
     }
-    await this.usersService.createUser(user.uid, email, name, surname);
-    return {
-      token: await this.firebaseService
-        .getApp()
-        .auth()
-        .createCustomToken(user.uid),
+    const id = (
+      await this._userRepository.insert({
+        firebaseId: user.uid,
+        email,
+        name,
+        surname,
+      })
+    ).identifiers[0].id;
+    await this._permissionsService.addPolicyToUser(id, 'User');
+    const token = await this.firebaseService
+      .getApp()
+      .auth()
+      .createCustomToken(user.uid);
+    const result = {
+      token,
+      debug:
+        process.env.NODE_ENV === 'development'
+          ? await this.firebaseService.getAuth().currentUser.getIdToken()
+          : undefined,
     };
+    await this.firebaseService.getAuth().signOut();
+    return result;
   }
 
   public extractTokenFromRequest(request: Request): string | null {
@@ -128,12 +164,18 @@ export class AuthService {
   public async setAuthContextFromTokenPayloadAsync(
     payload: TokenPayload,
   ): Promise<boolean> {
-    const user = await this.usersService.getUserByFirebaseId(payload.sub);
+    const user = await this._userRepository.findOne({
+      where: { firebaseId: payload.uid },
+    });
     if (!user) {
       return false;
     }
 
     this._authContext.user = user;
     return true;
+  }
+
+  public resetAuthContext() {
+    this._authContext.user = undefined;
   }
 }

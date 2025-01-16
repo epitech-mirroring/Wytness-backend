@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNull } from 'typeorm';
 
 export class WorkflowCreateNodeDTO {
   @ApiProperty({
@@ -34,12 +29,12 @@ export class WorkflowCreateNodeDTO {
   previous?: number;
 
   @ApiProperty({
-    description: 'Is this Node an entrypoint',
-    example: true,
+    description: 'The label of the output to connect to',
+    example: 1,
   })
   @IsOptional()
-  @IsBoolean()
-  entrypoint?: boolean;
+  @IsString()
+  label?: string;
 }
 
 export class WorkflowCreateDTO {
@@ -58,4 +53,38 @@ export class WorkflowCreateDTO {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @ApiProperty({
+    description: 'The status of the Workflow',
+    example: 'enabled',
+  })
+  @IsString()
+  @IsOptional()
+  status?: string;
+}
+
+export class WorkflowUpdateNodeDTO {
+  @ApiProperty({
+    description: 'The config of the Node',
+    example: {
+      config: 'config',
+    },
+  })
+  @IsOptional()
+  config?: any;
+
+  @ApiProperty({
+    description: 'The previous Node to connect to',
+    example: 1,
+  })
+  @IsOptional()
+  previous?: number | null;
+
+  @ApiProperty({
+    description: 'The label of the output to connect to',
+    example: 1,
+  })
+  @IsOptional()
+  @IsString()
+  label?: string;
 }

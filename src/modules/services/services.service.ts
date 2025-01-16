@@ -11,20 +11,30 @@ import {
   ServiceWithOAuth,
   Trigger,
 } from '../../types/services';
+import { PermissionsService } from '../permissions/permissions.service';
+import { User } from '../../types/user';
+import { FlowControlService } from '../../services/flow_control/flow-control.service';
+import * as process from 'node:process';
 
 @Injectable()
 export class ServicesService {
   services: Service[];
+
+  @Inject()
+  private readonly _permissionsService: PermissionsService;
 
   constructor(
     @Inject(forwardRef(() => DiscordService))
     private _discordService: DiscordService,
     @Inject(forwardRef(() => SpotifyService))
     private _spotifyService: SpotifyService,
+    @Inject(forwardRef(() => FlowControlService))
+    private _flowControlService: FlowControlService,
   ) {
     this.services = [
       this._discordService,
       this._spotifyService,
+      this._flowControlService,
     ];
   }
 
@@ -51,30 +61,35 @@ export class ServicesService {
     return this.services.map(
       (service) =>
         ({
-          ...(service.serviceMetadata || {}),
-          id: service.id,
           name: service.name,
           description: service.description,
-          nodes: service.nodes.map((node) => {
-            return {
-              id: node.id,
-              name: node.getName(),
-              type: node.type,
-            };
-          }),
+          logo:
+            (process.env.NODE_ENV === 'development'
+              ? 'http://localhost:4040'
+              : 'https://wytness.fr') +
+            '/api/services/' +
+            service.name +
+            '/logo.svg',
+          color: service.serviceMetadata.color,
         }) as ListService,
     );
   }
 
-  public async getConnections(userId: number): Promise<any> {
+  public async getConnections(userId: number, performer: User): Promise<any> {
     const connections = [];
+
+    if (
+      !(await this._permissionsService.can(performer, 'read', userId, User))
+    ) {
+      return connections;
+    }
 
     for (const service of this.services) {
       if (service.serviceMetadata.useAuth) {
-        const oauthService = service as ServiceWithAuth;
-        const connected = await oauthService.isUserConnected(userId);
+        const withAuth = service as ServiceWithAuth;
+        const connected = await withAuth.isUserConnected(userId);
         const connection = {
-          serviceId: service.id,
+          serviceId: service.name,
           connected,
           type: service.serviceMetadata.useAuth,
         };
@@ -83,7 +98,7 @@ export class ServicesService {
             connection['url'] = (service as ServiceWithOAuth).buildOAuthUrl();
             break;
           case 'code':
-            connection['url'] = '/services/' + service.id + '/get-code';
+            connection['url'] = '/services/' + service.name + '/get-code';
             connection['form'] = (service as ServiceWithCode).getForm();
             connection['alreadyHasCode'] = !!(await (
               service as ServiceWithCode
@@ -109,10 +124,6 @@ export class ServicesService {
       .map((service) => service.nodes)
       .flat()
       .find((node) => node.id === id && node.type == 'action') as Action;
-  }
-
-  public getIdFromName(name: string): number {
-    return this.services.find((service) => service.name === name)?.id;
   }
 
   public getServiceFromName(name: string): Service {

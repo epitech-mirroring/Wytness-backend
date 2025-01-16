@@ -4,19 +4,37 @@ import {
   Controller,
   Get,
   Inject,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Post,
+  Query,
+  Res,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { Private } from '../auth/decorators/private.decorator';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { AuthContext } from '../auth/auth.context';
-import { ServiceWithCode, ServiceWithOAuth } from '../../types/services';
+import {
+  ListService,
+  ServiceWithCode,
+  ServiceWithOAuth,
+} from '../../types/services';
 import { NodeDTO } from '../../dtos/node/node.dto';
-import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiInternalServerErrorResponse,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
+import * as fs from 'fs';
+import { Response } from 'express';
 
-@ApiTags('services')
+@ApiTags('Services')
 @Controller('services')
 export class ServicesController {
   @Inject()
@@ -40,6 +58,18 @@ export class ServicesController {
     status: 200,
     description: 'Service connected',
   })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Service does not use OAuth or code auth',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error',
+  })
+  @ApiBearerAuth('token')
   async authCallBack(
     @Param('serviceName') serviceName: string,
     @Body() body: ServiceConnectDTO,
@@ -49,15 +79,23 @@ export class ServicesController {
       throw new NotFoundException('Service not found');
     }
 
+    let success = false;
+    let message = '';
     switch (service.serviceMetadata.useAuth) {
       case 'OAuth':
-        await (service as ServiceWithOAuth).onOAuthCallback(
-          body,
-          this._authContext.user,
-        );
+        try {
+          await (service as ServiceWithOAuth).onOAuthCallback(
+            body,
+            this._authContext.user,
+          );
+          success = true;
+        } catch (error) {
+          success = false;
+          message = error.message;
+        }
         break;
       case 'code':
-        await (service as ServiceWithCode).verifyCode(
+        success = await (service as ServiceWithCode).verifyCode(
           this._authContext.user.id,
           parseInt(body.code),
         );
@@ -67,6 +105,10 @@ export class ServicesController {
           'Service does not use OAuth or code auth',
         );
     }
+    if (!success) {
+      throw new InternalServerErrorException(message);
+    }
+    return;
   }
 
   @Private()
@@ -88,6 +130,11 @@ export class ServicesController {
     status: 400,
     description: 'Service does not use code auth',
   })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  @ApiBearerAuth('token')
   async postAuthForm(
     @Param('serviceName') serviceName: string,
     @Body() body: any,
@@ -110,7 +157,7 @@ export class ServicesController {
     }
   }
 
-  @Private()
+  @Public()
   @Get('/:serviceName/nodes')
   @ApiParam({
     name: 'serviceName',
@@ -121,11 +168,14 @@ export class ServicesController {
     status: 200,
     description: 'List of service nodes',
     schema: {
-      properties: {
-        nodes: { type: 'array' },
+      items: {
+        $ref: getSchemaPath(NodeDTO),
       },
-      example: { nodes: [] },
     },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
   })
   async getServiceNodes(@Param('serviceName') serviceName: string) {
     const service = this._servicesService.getServiceByName(serviceName);
@@ -137,21 +187,21 @@ export class ServicesController {
       name: node.getName(),
       description: node.getDescription(),
       type: node.type,
-      fields: node.getFields(),
+      fields: this._authContext.authenticated ? node.getFields() : undefined,
+      labels: node.labels,
     }));
     return nodeDTO;
   }
 
-  @Private()
+  @Public()
   @Get('/')
   @ApiResponse({
     status: 200,
     description: 'List of services',
     schema: {
-      properties: {
-        services: { type: 'array' },
+      items: {
+        $ref: getSchemaPath(ListService),
       },
-      example: { services: [] },
     },
   })
   async getServices() {
@@ -171,6 +221,53 @@ export class ServicesController {
     },
   })
   async getConnectedServices() {
-    return this._servicesService.getConnections(this._authContext.user.id);
+    return this._servicesService.getConnections(
+      this._authContext.user.id,
+      this._authContext.user,
+    );
+  }
+
+  @Public()
+  @Get('/:serviceName/logo.svg')
+  @ApiParam({
+    name: 'serviceName',
+    description: 'Name of the service',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service logo',
+    schema: {
+      type: 'string',
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  async getServiceLogo(
+    @Res() response: Response,
+    @Param('serviceName') serviceName: string,
+    @Query('color') color?: string,
+    @Query('width') width?: string,
+    @Query('height') height?: string,
+  ) {
+    const service = this._servicesService.getServiceByName(serviceName);
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+    const file = `assets/services/${serviceName}.svg`;
+    let content = fs.readFileSync(file, 'utf8');
+    if (color) {
+      content = content.replace(/fill="#[0-9A-F]{6}"/gm, `fill="${color}"`);
+    }
+    if (width) {
+      content = content.replace(/width="(\d+)"/, `width="${width}"`);
+    }
+    if (height) {
+      content = content.replace(/height="(\d+)"/, `height="${height}"`);
+    }
+    response.appendHeader('Content-Type', 'image/svg+xml');
+    response.send(content);
   }
 }
