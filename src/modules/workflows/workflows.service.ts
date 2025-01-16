@@ -972,6 +972,7 @@ export class WorkflowsService implements OnModuleInit {
       });
 
       dbNext.next.push(dbNode);
+      node.previous = dbNext;
 
       await this._workflowNodeNextRepository.save(dbNext);
     }
