@@ -67,6 +67,7 @@ export class WorkflowsService implements OnModuleInit {
         let nextNode = new WorkflowNode(node.id, node.config);
         nextNode.node = node.node;
         nextNode.previous = node.previous;
+        nextNode.position = node.position;
         nextNode = await this.recursiveEntrypointSetup(nextNode);
         nextNodes.push(nextNode);
       }
@@ -150,6 +151,7 @@ export class WorkflowsService implements OnModuleInit {
         }
         let entrypoint = new WorkflowNode(node.id, node.config);
         entrypoint.node = node.node;
+        entrypoint.position = node.position;
 
         entrypoint = await this.recursiveEntrypointSetup(entrypoint);
         nodes.push(entrypoint);
@@ -714,6 +716,7 @@ export class WorkflowsService implements OnModuleInit {
               next: flattenNodes(next.next),
             };
           }),
+          position: dup.position,
         });
       }
       return flatNodes;
@@ -801,6 +804,7 @@ export class WorkflowsService implements OnModuleInit {
     config?: any,
     previousNodeId?: number | null,
     label?: string,
+    position?: { x: number; y: number },
   ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -883,6 +887,18 @@ export class WorkflowsService implements OnModuleInit {
       node.previous = previous.next.find((n) => n.label === labelA);
     }
 
+    if (position) {
+      await this._workflowNodeRepository.update(
+        {
+          id: nodeId,
+        },
+        {
+          position,
+        },
+      );
+      node.position = position;
+    }
+
     return true;
   }
 
@@ -893,6 +909,7 @@ export class WorkflowsService implements OnModuleInit {
     previousNodeId: number,
     previousNodeLabel: string,
     config: any,
+    position?: { x: number; y: number },
   ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -941,6 +958,7 @@ export class WorkflowsService implements OnModuleInit {
         id: nodeId,
       },
       config,
+      position: position || { x: 100, y: 100 },
     });
     if (!dbNode) {
       return false;
@@ -963,6 +981,7 @@ export class WorkflowsService implements OnModuleInit {
 
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
+    node.position = dbNode.position;
     if (previousNode) {
       previousNode.addNext(node, previousNodeLabel);
 

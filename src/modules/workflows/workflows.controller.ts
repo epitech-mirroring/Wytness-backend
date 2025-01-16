@@ -17,6 +17,7 @@ import { WorkflowsService } from './workflows.service';
 import {
   WorkflowCreateDTO,
   WorkflowCreateNodeDTO,
+  WorkflowUpdateNodeDTO,
 } from '../../dtos/workflows/workflows.dto';
 import { AuthContext } from '../auth/auth.context';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
@@ -281,7 +282,7 @@ export class WorkflowsController {
   async updateNode(
     @Param('workflowId') workflowId: string,
     @Param('nodeId') nodeId: string,
-    @Body() body: Partial<WorkflowCreateNodeDTO>,
+    @Body() body: WorkflowUpdateNodeDTO,
   ) {
     const workflowIdN = parseInt(workflowId);
     if (isNaN(workflowIdN)) {
@@ -299,6 +300,7 @@ export class WorkflowsController {
       body.config,
       body.previous,
       body.label,
+      body.position,
     );
     if (response) {
       return;
@@ -338,6 +340,7 @@ export class WorkflowsController {
       body.previous,
       body.label,
       body.config,
+      body.position,
     );
     if (response) {
       return;
