@@ -607,19 +607,9 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     let statusToUpdate: WorkflowStatus | undefined;
-
-    switch (status) {
-      case 'enabled':
-        statusToUpdate = WorkflowStatus.ENABLED;
-        break;
-      case 'disabled':
-        statusToUpdate = WorkflowStatus.DISABLED;
-        break;
-      case 'error':
-        statusToUpdate = WorkflowStatus.ERROR;
-        break;
-      default:
-        statusToUpdate = undefined;
+    if (status) {
+      statusToUpdate =
+        WorkflowStatus[status.toUpperCase() as keyof typeof WorkflowStatus];
     }
 
     const dbWorkflow = await this._workflowRepository.update(
@@ -647,13 +637,19 @@ export class WorkflowsService implements OnModuleInit {
     performer: User,
     name: string,
     description: string,
+    status?: string,
   ): Promise<Workflow | { error: string }> {
     if (
       !(await this._permissionsService.can(performer, 'create', null, Workflow))
     ) {
       return { error: 'Permission denied' };
     }
-    const workflow = new Workflow(name, description);
+    let statusToUpdate: WorkflowStatus;
+    if (status) {
+      statusToUpdate =
+        WorkflowStatus[status.toUpperCase() as keyof typeof WorkflowStatus];
+    }
+    const workflow = new Workflow(name, description, statusToUpdate);
     const workflowId = (
       await this._workflowRepository.save({
         name,
@@ -661,6 +657,7 @@ export class WorkflowsService implements OnModuleInit {
         owner: {
           id: performer.id,
         },
+        status: statusToUpdate,
       })
     ).id;
 
@@ -743,10 +740,6 @@ export class WorkflowsService implements OnModuleInit {
     if (!workflow) {
       return false;
     }
-
-    console.log('workflowNodes', workflow.nodes);
-    console.log('workflowEntryPoints', workflow.entrypoints);
-    console.log('workflowNodes', workflow.nodes);
 
     if (
       !(await this._permissionsService.can(

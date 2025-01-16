@@ -60,7 +60,7 @@ export class Workflow extends Resource {
   @Column({
     type: 'enum',
     enum: WorkflowStatus,
-    default: WorkflowStatus.ENABLED,
+    default: WorkflowStatus.DISABLED,
   })
   status: WorkflowStatus;
 
@@ -106,10 +106,11 @@ export class Workflow extends Resource {
 
   strandedNodes: WorkflowNode[];
 
-  constructor(name?: string, description?: string) {
+  constructor(name?: string, description?: string, status?: WorkflowStatus) {
     super();
     this.name = name;
     this.description = description;
+    this.status = status || WorkflowStatus.DISABLED;
     this.entrypoints = [];
     this.strandedNodes = [];
   }
