@@ -10,6 +10,7 @@ import {
 } from '../../providers/database/providers/service.providers';
 import { IfAction } from './nodes/actions/if.action';
 import { FlowControlService } from './flow-control.service';
+import { ForAction } from './nodes/actions/for.action';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FlowControlService } from './flow-control.service';
   ],
   providers: [
     IfAction,
+    ForAction,
     FlowControlService,
     ...serviceProviders,
     ...serviceUserProviders,
