@@ -6,6 +6,7 @@ import { DiscordModule } from '../../services/discord/discord.module';
 import { SpotifyModule } from '../../services/spotify/spotify.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { FlowControlModule } from '../../services/flow_control/flow-control.module';
+import { AirtableModule } from '../../services/airtable/airtable.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { FlowControlModule } from '../../services/flow_control/flow-control.modu
     forwardRef(() => DiscordModule),
     forwardRef(() => SpotifyModule),
     forwardRef(() => FlowControlModule),
+    forwardRef(() => AirtableModule),
   ],
   providers: [ServicesService],
   controllers: [ServicesController],

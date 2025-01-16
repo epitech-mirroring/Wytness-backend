@@ -14,6 +14,8 @@ import {
 import { Code } from './code.type';
 import { ServiceUser } from './connection.type';
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
+import { WorkflowExecutionTrace } from '../workflow';
+import { base64_urlencode } from '../global';
 
 export class ServiceMetadata {
   @Column('boolean')
@@ -96,6 +98,23 @@ export abstract class Service implements OnModuleInit {
         },
         relations: ['nodes'],
       });
+    } else {
+      await this._serviceRepository.update(
+        {
+          name: this.name,
+        },
+        {
+          description: this.description,
+          serviceMetadata: this.serviceMetadata,
+        },
+      );
+
+      service = await this._serviceRepository.findOne({
+        where: {
+          name: this.name,
+        },
+        relations: ['nodes'],
+      });
     }
 
     // Check if there is a mismatch between the nodes in the database and the nodes in the service
@@ -162,6 +181,41 @@ export abstract class Service implements OnModuleInit {
   public findAction(name: string): Node | undefined {
     return this.getActions().find((action) => action.getName() === name);
   }
+
+  protected fetch = async (
+    trace: WorkflowExecutionTrace | null,
+    url: string,
+    options?: RequestInit,
+  ): Promise<Response> => {
+    if (!trace) {
+      return fetch(url, options);
+    }
+    let sentSize = 0;
+    if (options) {
+      for (const key in options.headers) {
+        sentSize += key.length + options.headers[key].length;
+      }
+      if (options.body) {
+        if (typeof options.body === 'string') {
+          sentSize += options.body.length;
+        } else {
+          sentSize += JSON.stringify(options.body).length;
+        }
+      }
+    }
+    const response = await fetch(url, options).then((response) => {
+      trace.statistics.dataUsed.upload += sentSize;
+      return response;
+    });
+    const duplicate = response.clone();
+    const body = await duplicate.text();
+    let receivedSize = body.length;
+    for (const key in response.headers) {
+      receivedSize += key.length + response.headers[key].length;
+    }
+    trace.statistics.dataUsed.download += receivedSize;
+    return response;
+  };
 }
 
 export type OAuthEndpoints = {
@@ -173,11 +227,13 @@ export type OAuthConfig = {
   clientId: string;
   scopes: string;
   scopesSeparator?: string;
+  state?: string;
 };
 
 export const OAuthDefaultConfig: OAuthConfig = {
   clientId: 'client_id',
   scopes: 'scope',
+  state: 'state',
 };
 
 @Injectable()
@@ -236,14 +292,21 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     };
   }
 
+  codeVerifiers: { [key: string]: string } = {};
+
   public async onOAuthCallback(
-    { code }: ServiceConnectDTO,
+    { code, state }: ServiceConnectDTO,
     user: User,
   ): Promise<void> {
+    console.log('onOAuthCallback', code, state, this.codeVerifiers);
+    if (!this.codeVerifiers[state]) {
+      throw new Error('Invalid state');
+    }
     const bodyContent: any = {};
     bodyContent[this.config.clientId] = this.getClientId();
     bodyContent['client_secret'] = this.getClientSecret();
     bodyContent['code'] = code;
+    bodyContent['code_verifier'] = this.codeVerifiers[state];
     bodyContent['grant_type'] = 'authorization_code';
     bodyContent['redirect_uri'] = this.getRedirectUri();
     bodyContent[this.config.scopes] = this.getScopes().join(' ');
@@ -252,6 +315,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${btoa(`${this.getClientId()}:${this.getClientSecret()}`)}`,
       },
       body: new URLSearchParams(bodyContent).toString(),
     });
@@ -272,13 +336,31 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
         name: this.getName(),
       },
     });
+
+    delete this.codeVerifiers[state];
+
+    this.afterLogin(user);
   }
 
-  public buildOAuthUrl(): string {
-    return `${this.endpoints.authorize}?${this.config.clientId}=${this.getClientId()}&redirect_uri=${encodeURI(this.getRedirectUri())}&response_type=code&${this.config.scopes}=${encodeURI(this.getScopes().join(this.config.scopesSeparator || ' '))}`;
+  public async buildOAuthUrl(userId: number): Promise<string> {
+    const state = `${userId}-${Date.now()}-${Math.random()}`;
+    const code_verifier = base64_urlencode(
+      crypto.getRandomValues(new Uint8Array(32)),
+    );
+    const hashed = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(code_verifier),
+    );
+    const code_challenge = base64_urlencode(hashed);
+    this.codeVerifiers[state] = code_verifier;
+    const code_challenge_method = 'S256';
+    return `${this.endpoints.authorize}?${this.config.clientId}=${this.getClientId()}&redirect_uri=${encodeURI(this.getRedirectUri())}&response_type=code&${this.config.scopes}=${encodeURI(this.getScopes().join(this.config.scopesSeparator || ' '))}&${this.config.state}=${state}&code_challenge=${code_challenge}&code_challenge_method=${code_challenge_method}`;
   }
 
-  public afterLogin(): void {}
+  public afterLogin(user: User): void {
+    void user;
+    return;
+  }
 
   public async isUserConnected(userId: number): Promise<boolean> {
     return !!(await this._serviceUserRepository.findOne({
@@ -295,6 +377,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
 
   public async fetchWithOAuth(
     user: User,
+    trace: WorkflowExecutionTrace | null,
     url: string,
     options: RequestInit = {},
   ): Promise<Response> {
@@ -318,7 +401,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
       tokenType: string;
     };
 
-    const result = await fetch(url, {
+    const result = await this.fetch(trace, url, {
       ...options,
       headers: {
         ...options.headers,

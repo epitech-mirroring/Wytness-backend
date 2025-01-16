@@ -3,6 +3,7 @@ import { ServiceWithOAuth } from 'src/types/services/service.type';
 import { Trigger } from 'src/types/services/trigger.type';
 import { User } from 'src/types/user/user.type';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
+import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 
 @Injectable()
 export class PlayingMusicTrigger extends Trigger {
@@ -13,7 +14,12 @@ export class PlayingMusicTrigger extends Trigger {
     super('Playing Music', 'Trigger when the user is playing a music');
   }
 
-  public async trigger(data: any, config: any): Promise<any> {
+  public async trigger(
+    _label: string,
+    data: any,
+    config: any,
+    trace: WorkflowExecutionTrace,
+  ): Promise<any> {
     const user = config.user;
     const service = this.getService();
     if (!service) {
@@ -21,6 +27,7 @@ export class PlayingMusicTrigger extends Trigger {
     }
     const response = await (service as ServiceWithOAuth).fetchWithOAuth(
       user,
+      trace,
       'https://api.spotify.com/v1/me/player',
     );
 
@@ -42,6 +49,7 @@ export class PlayingMusicTrigger extends Trigger {
     }
     const response = await (service as ServiceWithOAuth).fetchWithOAuth(
       user,
+      null,
       'https://api.spotify.com/v1/me/player',
     );
 
