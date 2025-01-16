@@ -135,7 +135,14 @@ export class WorkflowExecutionTrace {
         }
         current = current[p];
       }
-      return before + this.safeString(current);
+      const type = typeof current;
+      if (type === 'string' || type === 'number' || type === 'boolean') {
+        return before + this.safeString(current.toString());
+      }
+      if (type === 'object') {
+        return before + this.safeString(JSON.stringify(current));
+      }
+      return before + 'undefined';
     });
   }
 
