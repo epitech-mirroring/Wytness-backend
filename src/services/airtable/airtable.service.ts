@@ -4,6 +4,8 @@ import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { OAuthDefaultConfig, ServiceWithOAuth } from '../../types/services';
 import { ListRecordsAction } from './nodes/actions/records/list-records.action';
 import { ListBasesAction } from './nodes/actions/bases/list-bases.action';
+import { GetBaseSchemaAction } from './nodes/actions/bases/get-base-schema.action';
+import { GetOneRecordAction } from './nodes/actions/records/get-one-record.action';
 
 @Injectable()
 export class AirtableService extends ServiceWithOAuth {
@@ -18,11 +20,20 @@ export class AirtableService extends ServiceWithOAuth {
     private readonly _listRecordsAction: ListRecordsAction,
     @Inject()
     private readonly _listBasesAction: ListBasesAction,
+    @Inject()
+    private readonly _getBaseSchemaAction: GetBaseSchemaAction,
+    @Inject()
+    private readonly _getOneRecordAction: GetOneRecordAction,
   ) {
     super(
       'airtable',
       'Airtable - Manage databases with a spreadsheet interface',
-      [_listRecordsAction, _listBasesAction],
+      [
+        _listRecordsAction,
+        _listBasesAction,
+        _getBaseSchemaAction,
+        _getOneRecordAction,
+      ],
       {
         token: 'https://airtable.com/oauth2/v1/token',
         authorize: 'https://airtable.com/oauth2/v1/authorize',

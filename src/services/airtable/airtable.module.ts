@@ -11,6 +11,8 @@ import {
 import { AirtableService } from './airtable.service';
 import { ListRecordsAction } from './nodes/actions/records/list-records.action';
 import { ListBasesAction } from './nodes/actions/bases/list-bases.action';
+import { GetBaseSchemaAction } from './nodes/actions/bases/get-base-schema.action';
+import { GetOneRecordAction } from './nodes/actions/records/get-one-record.action';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { ListBasesAction } from './nodes/actions/bases/list-bases.action';
     ...serviceNodeProviders,
     ListRecordsAction,
     ListBasesAction,
+    GetBaseSchemaAction,
+    GetOneRecordAction,
   ],
   exports: [AirtableService],
 })
