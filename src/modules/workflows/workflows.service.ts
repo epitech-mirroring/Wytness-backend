@@ -785,7 +785,7 @@ export class WorkflowsService implements OnModuleInit {
     workflow.entrypoints = workflow.entrypoints.filter(
       (node) => node.id !== nodeId,
     );
-    if (node.next.length > 0) {
+    if (node.next) {
       for (const nextNode of node.next) {
         for (const next of nextNode.next) {
           workflow.strandedNodes.push(next);
