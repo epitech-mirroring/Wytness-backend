@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNull } from 'typeorm';
 
 export class WorkflowCreateNodeDTO {
   @ApiProperty({
@@ -60,4 +61,30 @@ export class WorkflowCreateDTO {
   @IsString()
   @IsOptional()
   status?: string;
+}
+
+export class WorkflowUpdateNodeDTO {
+  @ApiProperty({
+    description: 'The config of the Node',
+    example: {
+      config: 'config',
+    },
+  })
+  @IsOptional()
+  config?: any;
+
+  @ApiProperty({
+    description: 'The previous Node to connect to',
+    example: 1,
+  })
+  @IsOptional()
+  previous?: number | null;
+
+  @ApiProperty({
+    description: 'The label of the output to connect to',
+    example: 1,
+  })
+  @IsOptional()
+  @IsString()
+  label?: string;
 }

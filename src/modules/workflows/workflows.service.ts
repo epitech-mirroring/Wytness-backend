@@ -177,11 +177,14 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     setInterval(async () => {
-      for (const workflow of this.workflows) {
+      workflow: for (const workflow of this.workflows) {
         for (const entrypoint of workflow.entrypoints) {
           const triggerNode = entrypoint.node as Trigger;
           if (!triggerNode) {
             continue;
+          }
+          if (workflow.status !== WorkflowStatus.ENABLED) {
+            continue workflow;
           }
           const service = this._servicesService.getServiceFromNode(
             triggerNode.id,
@@ -729,9 +732,6 @@ export class WorkflowsService implements OnModuleInit {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
-    console.log(workflow.nodes);
-    console.log('entryyyyy', workflow.entrypoints);
-    console.log('ouiiiii', workflow.strandedNodes);
 
     if (!workflow) {
       return false;
@@ -798,7 +798,9 @@ export class WorkflowsService implements OnModuleInit {
     performer: User,
     workflowId: number,
     nodeId: number,
-    config: any,
+    config?: any,
+    previousNodeId?: number | null,
+    label?: string,
   ): Promise<boolean> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -824,20 +826,63 @@ export class WorkflowsService implements OnModuleInit {
       return false;
     }
 
-    const dbNode = await this._workflowNodeRepository.update(
-      {
-        id: nodeId,
-      },
-      {
-        config,
-      },
-    );
+    const oldLabel = node.previous ? node.previous.label : undefined;
 
-    if (!dbNode) {
-      return false;
+    if (previousNodeId !== undefined || label) {
+      //disconnect node from previous in RAM
+      if (node.previous && node.previous.next) {
+        node.previous.next = node.previous.next.filter((n) => n.id !== nodeId);
+      }
+      node.previous = null;
+
+      //disconnect node from previous in DB
+      await this._workflowNodeRepository.update(
+        {
+          id: nodeId,
+        },
+        {
+          previous: null,
+        },
+      );
     }
 
-    node.config = config;
+    if (config) {
+      await this._workflowNodeRepository.update(
+        {
+          id: nodeId,
+        },
+        {
+          config,
+        },
+      );
+      node.config = config;
+    }
+
+    if (previousNodeId || (label && previousNodeId)) {
+      const labelA = label || oldLabel;
+      const previous = this.getNode(workflowId, previousNodeId);
+      if (!previous) {
+        return false;
+      }
+      if (!previous.node.labels.includes(labelA)) {
+        console.error('No previous node found', labelA);
+        return false;
+      }
+      previous.addNext(this.getNode(workflowId, nodeId), labelA);
+      await this._workflowNodeRepository.update(
+        {
+          id: nodeId,
+        },
+        {
+          previous: {
+            id: previousNodeId,
+            label: labelA,
+          },
+        },
+      );
+      node.previous = previous.next.find((n) => n.label === labelA);
+    }
+
     return true;
   }
 
@@ -935,12 +980,15 @@ export class WorkflowsService implements OnModuleInit {
   }
 
   public async findAndTriggerGlobal(data: any, nodeID: number) {
-    for (const workflow of this.workflows) {
+    workflow: for (const workflow of this.workflows) {
       for (const node of workflow.entrypoints) {
         if (node.node.id === nodeID) {
           const triggerNode = this._servicesService.getTrigger(nodeID);
           if (!triggerNode) {
             continue;
+          }
+          if (workflow.status !== WorkflowStatus.ENABLED) {
+            continue workflow;
           }
           for (const label of triggerNode.labels) {
             const shouldRun = await triggerNode.isTriggered(
