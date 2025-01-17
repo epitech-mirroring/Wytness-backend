@@ -6,6 +6,8 @@ import { ListRecordsAction } from './nodes/actions/records/list-records.action';
 import { ListBasesAction } from './nodes/actions/bases/list-bases.action';
 import { GetBaseSchemaAction } from './nodes/actions/bases/get-base-schema.action';
 import { GetOneRecordAction } from './nodes/actions/records/get-one-record.action';
+import { UpdateRecordAction } from './nodes/actions/records/update-record.action';
+import { DeleteRecordAction } from './nodes/actions/records/delete-record.action';
 
 @Injectable()
 export class AirtableService extends ServiceWithOAuth {
@@ -24,6 +26,10 @@ export class AirtableService extends ServiceWithOAuth {
     private readonly _getBaseSchemaAction: GetBaseSchemaAction,
     @Inject()
     private readonly _getOneRecordAction: GetOneRecordAction,
+    @Inject()
+    private readonly _updateRecordAction: UpdateRecordAction,
+    @Inject()
+    private readonly _deleteRecordAction: DeleteRecordAction,
   ) {
     super(
       'airtable',

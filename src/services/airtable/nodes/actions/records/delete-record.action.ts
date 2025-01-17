@@ -6,7 +6,7 @@ import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 import { AirtableService } from '../../../airtable.service';
 
 @Injectable()
-export class GetOneRecordAction extends Action {
+export class DeleteRecordAction extends Action {
   @Inject()
   private readonly _configService: ConfigService;
 
@@ -15,8 +15,8 @@ export class GetOneRecordAction extends Action {
 
   constructor() {
     super(
-      'Get One Record',
-      'Retrieve a single record from a table',
+      'Update Record',
+      'Updates a single record.',
       ['output'],
       [
         new Field(
@@ -29,14 +29,14 @@ export class GetOneRecordAction extends Action {
         new Field(
           'Table ID or Name',
           'table_id',
-          'The ID or name of the table to retrieve the record from',
+          'The ID or name of the table where the record is',
           FieldType.STRING,
           false,
         ),
         new Field(
           'Record ID',
           'record_id',
-          'The ID of the record to retrieve',
+          'The ID of the record to delete',
           FieldType.STRING,
           false,
         ),
@@ -59,6 +59,9 @@ export class GetOneRecordAction extends Action {
       user,
       trace,
       `https://api.airtable.com/v0/${baseId}/${tableId}/${recordId}`,
+      {
+        method: 'DELETE',
+      },
     );
 
     return await res.json();
