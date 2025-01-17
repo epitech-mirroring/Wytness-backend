@@ -419,6 +419,18 @@ export class WorkflowsService implements OnModuleInit {
     }
   }
 
+  // This method is expensive, it should be used sparingly
+  public findNodeById(nodeId: number): WorkflowNode | undefined {
+    for (const workflow of this.workflows) {
+      for (const node of workflow.entrypoints) {
+        const found = this.recursiveFindNode(node, nodeId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+  }
+
   public async runNode(
     nodeId: number,
     data: any,

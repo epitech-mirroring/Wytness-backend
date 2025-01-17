@@ -34,7 +34,6 @@ export class AuthService {
         return decodedToken;
       })
       .catch((error) => {
-        console.error(error);
         return null;
       });
     return !!decodedToken;
