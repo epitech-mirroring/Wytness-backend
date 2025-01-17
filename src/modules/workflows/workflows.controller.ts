@@ -181,6 +181,7 @@ export class WorkflowsController {
       this._authContext.user,
       body.name,
       body.description,
+      body.status,
     );
     if ('error' in created) {
       throw new BadRequestException(created.error);
