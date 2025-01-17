@@ -10,13 +10,20 @@ import { Node } from '../../services';
 import { WorkflowNodeNext } from './node.next.type';
 import { Workflow } from '../workflow.type';
 
+export class Position {
+  @Column('int', { default: 100 })
+  x: number;
+  @Column('int', { default: 100 })
+  y: number;
+}
+
 @Entity('workflow_nodes')
 export class WorkflowNode {
   @PrimaryGeneratedColumn()
   id: number;
 
   @JoinColumn()
-  @ManyToOne(() => Node, { eager: true })
+  @ManyToOne(() => Node, { eager: true, cascade: true, onDelete: 'CASCADE' })
   node: Node;
 
   @Column('simple-json')
@@ -44,6 +51,9 @@ export class WorkflowNode {
   @JoinColumn()
   @ManyToOne(() => Workflow)
   workflow: any;
+
+  @Column(() => Position)
+  position: Position;
 
   constructor(id: number, config: any) {
     this.id = id;

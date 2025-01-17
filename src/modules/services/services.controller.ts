@@ -112,6 +112,48 @@ export class ServicesController {
   }
 
   @Private()
+  @Post('/:serviceName/disconnect')
+  @ApiParam({
+    name: 'serviceName',
+    description: 'Name of the service',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service disconnected',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Service not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Service does not use OAuth or code auth',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error',
+  })
+  @ApiBearerAuth('token')
+  async disconnect(@Param('serviceName') serviceName: string) {
+    const service = this._servicesService.getServiceByName(serviceName);
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+    if (service.serviceMetadata.useAuth === undefined) {
+      throw new BadRequestException('Service does not use OAuth or code auth');
+    }
+
+    const success = await this._servicesService.disconnectService(
+      this._authContext.user.id,
+      serviceName,
+    );
+    if (!success) {
+      throw new InternalServerErrorException('Failed to disconnect service');
+    }
+    return;
+  }
+
+  @Private()
   @Post('/:serviceName/connect/form')
   @ApiParam({
     name: 'serviceName',

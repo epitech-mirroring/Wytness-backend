@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class WorkflowCreateNodeDTO {
   @ApiProperty({
@@ -34,6 +40,20 @@ export class WorkflowCreateNodeDTO {
   @IsOptional()
   @IsString()
   label?: string;
+
+  @ApiProperty({
+    description: 'The position of the Node',
+    example: {
+      x: 100,
+      y: 100,
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  position?: {
+    x: number;
+    y: number;
+  };
 }
 
 export class WorkflowCreateDTO {
@@ -86,4 +106,18 @@ export class WorkflowUpdateNodeDTO {
   @IsOptional()
   @IsString()
   label?: string;
+
+  @ApiProperty({
+    description: 'The position of the Node',
+    example: {
+      x: 100,
+      y: 100,
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  position?: {
+    x: number;
+    y: number;
+  };
 }

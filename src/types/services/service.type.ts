@@ -197,6 +197,17 @@ export abstract class ServiceWithAuth extends Service {
   protected _serviceUserRepository: Repository<ServiceUser>;
 
   public abstract isUserConnected(userId: number): Promise<boolean>;
+
+  public async disconnectUser(userId: number): Promise<boolean> {
+    return !!(await this._serviceUserRepository.delete({
+      user: {
+        id: userId,
+      },
+      service: {
+        name: this.getName(),
+      },
+    }));
+  }
 }
 
 @Injectable()

@@ -17,6 +17,7 @@ import { WorkflowsService } from './workflows.service';
 import {
   WorkflowCreateDTO,
   WorkflowCreateNodeDTO,
+  WorkflowUpdateNodeDTO,
 } from '../../dtos/workflows/workflows.dto';
 import { AuthContext } from '../auth/auth.context';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
@@ -159,11 +160,10 @@ export class WorkflowsController {
       body.name,
       body.description,
     );
-    if (workflow) {
-      return;
-    } else {
-      throw new NotFoundException('Workflow not found');
+    if ('error' in workflow) {
+      throw new BadRequestException(workflow.error);
     }
+    return this._workflowsService.workflowToJsonObject(workflow);
   }
 
   @Private()
@@ -181,12 +181,12 @@ export class WorkflowsController {
       this._authContext.user,
       body.name,
       body.description,
+      body.status,
     );
-    if (created) {
-      return;
-    } else {
-      throw new ForbiddenException('Not authorized');
+    if ('error' in created) {
+      throw new BadRequestException(created.error);
     }
+    return this._workflowsService.workflowToJsonObject(created);
   }
 
   @Private()
@@ -281,7 +281,7 @@ export class WorkflowsController {
   async updateNode(
     @Param('workflowId') workflowId: string,
     @Param('nodeId') nodeId: string,
-    @Body() body: Partial<WorkflowCreateNodeDTO>,
+    @Body() body: WorkflowUpdateNodeDTO,
   ) {
     const workflowIdN = parseInt(workflowId);
     if (isNaN(workflowIdN)) {
@@ -299,12 +299,12 @@ export class WorkflowsController {
       body.config,
       body.previous,
       body.label,
+      body.position,
     );
-    if (response) {
-      return;
-    } else {
-      throw new NotFoundException('Node not found');
+    if ('error' in response) {
+      throw new BadRequestException(response.error);
     }
+    return this._workflowsService.nodeToJsonObject(response);
   }
 
   @Private()
@@ -338,11 +338,11 @@ export class WorkflowsController {
       body.previous,
       body.label,
       body.config,
+      body.position,
     );
-    if (response) {
-      return;
-    } else {
-      throw new NotFoundException('Node not found');
+    if ('error' in response) {
+      throw new BadRequestException(response.error);
     }
+    return this._workflowsService.nodeToJsonObject(response);
   }
 }
