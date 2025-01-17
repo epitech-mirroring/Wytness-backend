@@ -42,6 +42,7 @@ export class AirtableService extends ServiceWithOAuth {
       {
         color: '#FFFFFF',
         useCron: false,
+        useWebhooks: false,
       },
     );
   }
