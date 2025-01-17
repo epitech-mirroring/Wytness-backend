@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ServiceConnectDTO {
@@ -9,4 +9,12 @@ export class ServiceConnectDTO {
   @IsString()
   @IsNotEmpty()
   code: string;
+
+  @ApiProperty({
+    description: 'The state returned by the oauth (mandatory for oauth)',
+    example: '4567854267',
+  })
+  @IsString()
+  @IsOptional()
+  state?: string;
 }

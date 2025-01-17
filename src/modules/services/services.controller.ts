@@ -83,6 +83,9 @@ export class ServicesController {
     let message = '';
     switch (service.serviceMetadata.useAuth) {
       case 'OAuth':
+        if (!body.state) {
+          throw new BadRequestException('State is required for OAuth');
+        }
         try {
           await (service as ServiceWithOAuth).onOAuthCallback(
             body,

@@ -16,6 +16,7 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { User } from '../../types/user';
 import { FlowControlService } from '../../services/flow_control/flow-control.service';
 import * as process from 'node:process';
+import { AirtableService } from '../../services/airtable/airtable.service';
 
 @Injectable()
 export class ServicesService {
@@ -31,11 +32,14 @@ export class ServicesService {
     private _spotifyService: SpotifyService,
     @Inject(forwardRef(() => FlowControlService))
     private _flowControlService: FlowControlService,
+    @Inject(forwardRef(() => AirtableService))
+    private _airtableService: AirtableService,
   ) {
     this.services = [
       this._discordService,
       this._spotifyService,
       this._flowControlService,
+      this._airtableService,
     ];
   }
 
@@ -96,7 +100,9 @@ export class ServicesService {
         };
         switch (service.serviceMetadata.useAuth) {
           case 'OAuth':
-            connection['url'] = (service as ServiceWithOAuth).buildOAuthUrl();
+            connection['url'] = await (
+              service as ServiceWithOAuth
+            ).buildOAuthUrl(userId);
             break;
           case 'code':
             connection['url'] = '/services/' + service.name + '/get-code';

@@ -158,6 +158,20 @@ export class WorkflowExecutionTrace {
           return str.includes(substr) ? '1' : '0';
         },
       },
+      length: {
+        minArgs: 1,
+        maxArgs: 1,
+        args: ['string'],
+        func: (str: string) => {
+          if (str.length > 2 && str[0] === '[' && str[str.length - 1] === ']') {
+            const array = JSON.parse(str);
+            if (Array.isArray(array)) {
+              return array.length.toString();
+            }
+          }
+          return str.length.toString();
+        },
+      },
     };
 
     for (let i = 0; i < str.length; i++) {
