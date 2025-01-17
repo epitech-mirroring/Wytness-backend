@@ -9,6 +9,7 @@ import { ServicesModule } from './modules/services/services.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
 import { DatabaseModule } from './providers/database/database.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DatabaseModule } from './providers/database/database.module';
     WorkflowsModule,
     StatisticsModule,
     DatabaseModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [],

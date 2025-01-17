@@ -9,6 +9,7 @@ import {
   ServiceWithAuth,
   ServiceWithCode,
   ServiceWithOAuth,
+  ServiceWithWebhooks,
   Trigger,
 } from '../../types/services';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -147,5 +148,35 @@ export class ServicesService {
     return this.services.find((service) =>
       service.nodes.some((node) => node.id === nodeId),
     );
+  }
+
+  public async disconnectService(
+    userId: number,
+    serviceName: string,
+  ): Promise<boolean> {
+    const service = this.getServiceByName(serviceName);
+    if (!service) {
+      throw new Error('Service not found');
+    }
+    if (service.serviceMetadata.useAuth) {
+      const withAuth = service as ServiceWithAuth;
+      return await withAuth.disconnectUser(userId);
+    }
+    return false;
+  }
+
+  public async manageWebhook(
+    service: Service,
+    id: string,
+    data: any,
+    user: User,
+  ): Promise<void> {
+    const serviceWithWebhooks = this.services.find(
+      (s) => s.name === service.name,
+    ) as ServiceWithWebhooks;
+    if (!serviceWithWebhooks) {
+      throw new Error('Service does not support webhooks');
+    }
+    await serviceWithWebhooks.onWebhookCalled(id, data, user);
   }
 }

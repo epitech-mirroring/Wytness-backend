@@ -27,6 +27,7 @@ export class FlowControlService extends Service {
         color: '#F2BE4E',
         useCron: false,
         useAuth: undefined,
+        useWebhooks: false,
       },
     );
   }

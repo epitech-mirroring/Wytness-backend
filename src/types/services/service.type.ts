@@ -24,7 +24,16 @@ export class ServiceMetadata {
   useAuth: undefined | 'OAuth' | 'code';
   @Column('text', { default: '#FFFFFF' })
   color: string;
+  @Column('boolean', { default: false })
+  useWebhooks: boolean;
 }
+
+export const DefaultServiceMetadata: ServiceMetadata = {
+  useCron: false,
+  useAuth: undefined,
+  color: '#FFFFFF',
+  useWebhooks: false,
+};
 
 export type CodeFormField = {
   type: 'text' | 'number' | 'email' | 'password';
@@ -55,20 +64,12 @@ export abstract class Service implements OnModuleInit {
     name: string,
     description: string,
     nodes: Node[],
-    serviceMetadata: ServiceMetadata = {
-      useAuth: undefined,
-      useCron: false,
-      color: '#FFFFFF',
-    },
+    serviceMetadata: ServiceMetadata = DefaultServiceMetadata,
   ) {
     this.name = name;
     this.description = description;
     this.nodes = nodes;
-    this.serviceMetadata = serviceMetadata || {
-      useAuth: undefined,
-      useCron: false,
-      color: '#FFFFFF',
-    };
+    this.serviceMetadata = serviceMetadata || DefaultServiceMetadata;
   }
 
   @Inject('SERVICE_REPOSITORY')
@@ -252,6 +253,17 @@ export abstract class ServiceWithAuth extends Service {
   protected _serviceUserRepository: Repository<ServiceUser>;
 
   public abstract isUserConnected(userId: number): Promise<boolean>;
+
+  public async disconnectUser(userId: number): Promise<boolean> {
+    return !!(await this._serviceUserRepository.delete({
+      user: {
+        id: userId,
+      },
+      service: {
+        name: this.getName(),
+      },
+    }));
+  }
 }
 
 @Injectable()
@@ -265,10 +277,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
     nodes: Node[],
     endpoint: OAuthEndpoints,
     config: OAuthConfig = OAuthDefaultConfig,
-    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = {
-      useCron: false,
-      color: '#FFFFFF',
-    },
+    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = DefaultServiceMetadata,
   ) {
     super(name, description, nodes, {
       ...serviceMetadata,
@@ -522,10 +531,7 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     name: string,
     description: string,
     nodes: Node[],
-    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = {
-      useCron: false,
-      color: '#FFFFFF',
-    },
+    serviceMetadata: Omit<ServiceMetadata, 'useAuth'> = DefaultServiceMetadata,
   ) {
     super(name, description, nodes, {
       ...serviceMetadata,
@@ -662,4 +668,8 @@ export class ListService {
     example: 'Service description',
   })
   description: string;
+}
+
+export interface ServiceWithWebhooks extends Service {
+  onWebhookCalled(id: string, data: any, user: User): Promise<void>;
 }

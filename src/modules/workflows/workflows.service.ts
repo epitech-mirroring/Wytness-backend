@@ -419,6 +419,18 @@ export class WorkflowsService implements OnModuleInit {
     }
   }
 
+  // This method is expensive, it should be used sparingly
+  public findNodeById(nodeId: number): WorkflowNode | undefined {
+    for (const workflow of this.workflows) {
+      for (const node of workflow.entrypoints) {
+        const found = this.recursiveFindNode(node, nodeId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+  }
+
   public async runNode(
     nodeId: number,
     data: any,
@@ -607,19 +619,9 @@ export class WorkflowsService implements OnModuleInit {
     }
 
     let statusToUpdate: WorkflowStatus | undefined;
-
-    switch (status) {
-      case 'enabled':
-        statusToUpdate = WorkflowStatus.ENABLED;
-        break;
-      case 'disabled':
-        statusToUpdate = WorkflowStatus.DISABLED;
-        break;
-      case 'error':
-        statusToUpdate = WorkflowStatus.ERROR;
-        break;
-      default:
-        statusToUpdate = undefined;
+    if (status) {
+      statusToUpdate =
+        WorkflowStatus[status.toUpperCase() as keyof typeof WorkflowStatus];
     }
 
     const dbWorkflow = await this._workflowRepository.update(
@@ -647,13 +649,19 @@ export class WorkflowsService implements OnModuleInit {
     performer: User,
     name: string,
     description: string,
+    status?: string,
   ): Promise<Workflow | { error: string }> {
     if (
       !(await this._permissionsService.can(performer, 'create', null, Workflow))
     ) {
       return { error: 'Permission denied' };
     }
-    const workflow = new Workflow(name, description);
+    let statusToUpdate: WorkflowStatus;
+    if (status) {
+      statusToUpdate =
+        WorkflowStatus[status.toUpperCase() as keyof typeof WorkflowStatus];
+    }
+    const workflow = new Workflow(name, description, statusToUpdate);
     const workflowId = (
       await this._workflowRepository.save({
         name,
@@ -661,6 +669,7 @@ export class WorkflowsService implements OnModuleInit {
         owner: {
           id: performer.id,
         },
+        status: statusToUpdate,
       })
     ).id;
 
@@ -781,7 +790,7 @@ export class WorkflowsService implements OnModuleInit {
     workflow.entrypoints = workflow.entrypoints.filter(
       (node) => node.id !== nodeId,
     );
-    if (node.next.length > 0) {
+    if (node.next) {
       for (const nextNode of node.next) {
         for (const next of nextNode.next) {
           workflow.strandedNodes.push(next);
@@ -960,6 +969,10 @@ export class WorkflowsService implements OnModuleInit {
       node: {
         id: nodeId,
       },
+      next: Tnode.labels.map((label) => ({
+        label,
+        next: [],
+      })),
       config,
       position: position || { x: 100, y: 100 },
     });
@@ -967,9 +980,11 @@ export class WorkflowsService implements OnModuleInit {
       return { error: 'Could not save node' };
     }
 
+    const dbNodeNext = dbNode.next;
+
     dbNode = await this._workflowNodeRepository.findOne({
       where: { id: dbNode.id },
-      relations: ['node'],
+      relations: ['node', 'next'],
     });
 
     for (const label of dbNode.node.labels) {
@@ -985,6 +1000,7 @@ export class WorkflowsService implements OnModuleInit {
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
     node.position = dbNode.position;
+    node.next = dbNodeNext;
     if (previousNode) {
       previousNode.addNext(node, previousNodeLabel);
 

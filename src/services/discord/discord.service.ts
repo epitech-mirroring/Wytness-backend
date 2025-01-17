@@ -43,6 +43,7 @@ export class DiscordService extends ServiceWithOAuth {
       {
         color: '#5865F2',
         useCron: false,
+        useWebhooks: false,
       },
     );
   }

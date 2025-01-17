@@ -29,7 +29,7 @@ export class SpotifyService extends ServiceWithOAuth {
         token: 'https://accounts.spotify.com/api/token',
       },
       OAuthDefaultConfig,
-      { useCron: true, color: '#1ED760' },
+      { useCron: true, color: '#1ED760', useWebhooks: false },
     );
   }
 
