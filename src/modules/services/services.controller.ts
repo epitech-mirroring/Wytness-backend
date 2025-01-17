@@ -308,9 +308,15 @@ export class ServicesController {
     }
     if (width) {
       content = content.replace(/width="(\d+)"/, `width="${width}"`);
+      if (!content.includes('width')) {
+        content = content.replace('<svg', `<svg width="${width}"`);
+      }
     }
     if (height) {
       content = content.replace(/height="(\d+)"/, `height="${height}"`);
+      if (!content.includes('height')) {
+        content = content.replace('<svg', `<svg height="${height}"`);
+      }
     }
     response.appendHeader('Content-Type', 'image/svg+xml');
     response.send(content);
