@@ -740,17 +740,105 @@ export class WorkflowsService implements OnModuleInit {
     return nodes;
   }
 
-  public async deleteNode(
-    performer: User,
+  private async disconnectNode(
     workflowId: number,
     nodeId: number,
-  ): Promise<boolean> {
+  ): Promise<void | { error: string }> {
+    const dbNode = await this._workflowNodeRepository.findOne({
+      where: { id: nodeId },
+      relations: ['previous'],
+    });
+
+    const ramNode = this.getNode(workflowId, nodeId);
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return false;
+      return { error: 'Workflow not found' };
+    }
+
+    if (!dbNode || !ramNode) {
+      return { error: 'Node not found' };
+    }
+
+    if (!dbNode.previous) {
+      return { error: 'Node has no previous node' };
+    }
+    const previous = this.getNode(workflowId, dbNode.previous.parent.id);
+
+    if (!previous) {
+      return { error: 'Previous node not found' };
+    }
+
+    // Disconnect node from previous in RAM
+    previous.next = previous.next.map((next) => {
+      return {
+        id: next.id,
+        parent: next.parent,
+        label: next.label,
+        next: next.next.filter((n) => n.id !== nodeId),
+      };
+    });
+    ramNode.previous = null;
+
+    // Disconnect node from previous in DB
+    await this._workflowNodeRepository.update(
+      {
+        id: nodeId,
+      },
+      {
+        previous: null,
+      },
+    );
+    workflow.strandedNodes.push(ramNode);
+  }
+
+  private async removeNodeFromWorkflow(
+    workflowId: number,
+    nodeId: number,
+  ): Promise<void | { error: string }> {
+    const nodeRam = this.getNode(workflowId, nodeId);
+    const nodeDb = await this._workflowNodeRepository.findOne({
+      where: { id: nodeId },
+    });
+
+    if (!nodeRam || !nodeDb) {
+      return { error: 'Node not found' };
+    }
+
+    await this._workflowNodeRepository.delete({
+      id: nodeId,
+    });
+
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+    workflow.nodes = workflow.nodes.filter((node) => node.id !== nodeId);
+    workflow.strandedNodes = workflow.strandedNodes.filter(
+      (node) => node.id !== nodeId,
+    );
+    workflow.entrypoints = workflow.entrypoints.filter(
+      (node) => node.id !== nodeId,
+    );
+
+    if (this.getNode(workflowId, nodeId)) {
+      return { error: 'Could not delete node' };
+    }
+  }
+
+  public async deleteNode(
+    performer: User,
+    workflowId: number,
+    nodeId: number,
+  ): Promise<void | { error: string }> {
+    // check authorization of the user to delete the node
+    const workflow = this.workflows.find(
+      (workflow) => workflow.id === workflowId,
+    );
+
+    if (!workflow) {
+      return { error: 'Workflow not found' };
     }
 
     if (
@@ -761,53 +849,28 @@ export class WorkflowsService implements OnModuleInit {
         Workflow,
       ))
     ) {
-      return false;
+      return { error: 'Permission denied' };
     }
 
-    const node = this.getNode(workflowId, nodeId);
-
-    if (!node) {
-      return false;
-    }
-
-    const dbNode = await this._workflowNodeRepository.delete({
-      id: nodeId,
+    // Get the current node, in the DB and in the RAM
+    const nodeRam = this.getNode(workflowId, nodeId);
+    const nodeDb = await this._workflowNodeRepository.findOne({
+      where: { id: nodeId },
+      relations: ['next', 'next.next'],
     });
 
-    if (!dbNode) {
-      return false;
+    if (!nodeRam || !nodeDb) {
+      return { error: 'Node not found' };
     }
 
-    const dbNext = await this._workflowNodeNextRepository.find({
-      where: { parent: { id: nodeId } },
-    });
+    await this.disconnectNode(workflowId, nodeId);
 
-    for (const next of dbNext) {
-      await this._workflowNodeNextRepository.delete({ id: next.id });
-    }
-
-    workflow.nodes = workflow.nodes.filter((node) => node.id !== nodeId);
-    workflow.entrypoints = workflow.entrypoints.filter(
-      (node) => node.id !== nodeId,
-    );
-    if (node.next) {
-      for (const nextNode of node.next) {
-        for (const next of nextNode.next) {
-          workflow.strandedNodes.push(next);
-          workflow.nodes = workflow.nodes.filter((node) => node.id !== next.id);
-        }
+    for (const next of nodeDb.next) {
+      for (const n of next.next) {
+        await this.disconnectNode(workflowId, n.id);
       }
     }
-    for (const entrypoint of workflow.entrypoints) {
-      for (const next of entrypoint.next) {
-        next.next = next.next.filter((node) => node.id !== nodeId);
-      }
-    }
-    workflow.strandedNodes = workflow.strandedNodes.filter(
-      (node) => node.id !== nodeId,
-    );
-
-    return true;
+    return await this.removeNodeFromWorkflow(workflowId, nodeId);
   }
 
   public async updateNode(
@@ -846,21 +909,7 @@ export class WorkflowsService implements OnModuleInit {
     const oldLabel = node.previous ? node.previous.label : undefined;
 
     if (previousNodeId !== undefined || label) {
-      //disconnect node from previous in RAM
-      if (node.previous && node.previous.next) {
-        node.previous.next = node.previous.next.filter((n) => n.id !== nodeId);
-      }
-      node.previous = null;
-
-      //disconnect node from previous in DB
-      await this._workflowNodeRepository.update(
-        {
-          id: nodeId,
-        },
-        {
-          previous: null,
-        },
-      );
+      await this.disconnectNode(workflowId, nodeId);
     }
 
     if (config) {
@@ -980,8 +1029,6 @@ export class WorkflowsService implements OnModuleInit {
       return { error: 'Could not save node' };
     }
 
-    const dbNodeNext = dbNode.next;
-
     dbNode = await this._workflowNodeRepository.findOne({
       where: { id: dbNode.id },
       relations: ['node', 'next'],
@@ -997,10 +1044,23 @@ export class WorkflowsService implements OnModuleInit {
       });
     }
 
+    dbNode = await this._workflowNodeRepository.findOne({
+      where: { id: dbNode.id },
+      relations: ['next'],
+    });
+
     const node = new WorkflowNode(dbNode.id, config);
     node.node = this._servicesService.getNode(nodeId);
     node.position = dbNode.position;
-    node.next = dbNodeNext;
+    node.next = dbNode.next;
+    node.next = node.next.map((next) => {
+      return {
+        id: next.id,
+        label: next.label,
+        next: [],
+        parent: node,
+      };
+    });
     if (previousNode) {
       previousNode.addNext(node, previousNodeLabel);
 
