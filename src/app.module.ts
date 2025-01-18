@@ -21,6 +21,7 @@ import {
 } from './types/workflow';
 import { Code, Node, Service, ServiceUser } from './types/services';
 import { Webhook } from './types/webhook/webhook.type';
+import * as process from 'node:process';
 
 @Module({
   imports: [
@@ -32,31 +33,52 @@ import { Webhook } from './types/webhook/webhook.type';
     DiscordModule,
     WorkflowsModule,
     StatisticsModule,
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      schema: process.env.DB_SCHEMA,
-      entities: [
-        User,
-        Rule<Resource>,
-        Policy,
-        Workflow,
-        WorkflowNode,
-        WorkflowExecution,
-        WorkflowExecutionTrace,
-        Service,
-        Node,
-        ServiceUser,
-        Code,
-        WorkflowNodeNext,
-        Webhook,
-      ],
-      synchronize: true,
-    }),
+    process.env.DB_HOST
+      ? TypeOrmModule.forRoot({
+          type: 'postgres',
+          host: process.env.DB_HOST,
+          port: parseInt(process.env.DB_PORT),
+          username: process.env.DB_USERNAME,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          schema: process.env.DB_SCHEMA,
+          entities: [
+            User,
+            Rule<Resource>,
+            Policy,
+            Workflow,
+            WorkflowNode,
+            WorkflowExecution,
+            WorkflowExecutionTrace,
+            Service,
+            Node,
+            ServiceUser,
+            Code,
+            WorkflowNodeNext,
+            Webhook,
+          ],
+          synchronize: true,
+        })
+      : TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [
+            User,
+            Rule,
+            Policy,
+            Workflow,
+            WorkflowNode,
+            WorkflowExecution,
+            WorkflowExecutionTrace,
+            Service,
+            Node,
+            ServiceUser,
+            Code,
+            WorkflowNodeNext,
+            Webhook,
+          ],
+          synchronize: true,
+        }),
     WebhookModule,
   ],
   controllers: [AppController],
