@@ -18,7 +18,7 @@ export class WeatherService extends Service {
       'Integrate Wytness with your weather workspace',
       [_weatherAction],
       {
-        color: '#36C5F0',
+        color: '#FFFFFF',
         useCron: true,
         useAuth: undefined,
         useWebhooks: false,
