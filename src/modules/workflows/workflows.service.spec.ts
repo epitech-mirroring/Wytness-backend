@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkflowsService } from './workflows.service';
 import { Repository } from 'typeorm';
-import { Workflow } from '../../types/workflow';
+import { Workflow, WorkflowStatus } from '../../types/workflow';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ExecutionsService } from './executions.service';
 import { NodesService } from './nodes.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ServicesService } from '../services/services.service';
+import { User } from '../../types/user';
 
 const oneWorkflow = new Workflow('Test Workflow', 'Test Description');
 oneWorkflow.id = 1;
@@ -39,6 +40,7 @@ describe('Workflows Service', () => {
           useValue: {
             createPolicy: jest.fn().mockResolvedValue('User'),
             addRuleToPolicy: jest.fn().mockResolvedValue(1),
+            can: jest.fn().mockResolvedValue(true),
           },
         },
         {
@@ -51,7 +53,8 @@ describe('Workflows Service', () => {
           provide: getRepositoryToken(Workflow),
           useValue: {
             find: jest.fn().mockResolvedValue(workflowArray),
-            save: jest.fn(),
+            save: jest.fn().mockResolvedValue(oneWorkflow),
+            findOne: jest.fn().mockResolvedValue(oneWorkflow),
             update: jest.fn().mockResolvedValue(true),
             delete: jest.fn().mockResolvedValue(true),
           },
@@ -75,5 +78,43 @@ describe('Workflows Service', () => {
 
   it('should return a workflow', async () => {
     await expect(service.getWorkflow(1)).resolves.toEqual(oneWorkflow);
+  });
+
+  it('should list all workflows', async () => {
+    await expect(service.listWorkflows(null)).resolves.toEqual(workflowArray);
+  });
+
+  it('should create a workflow', async () => {
+    const newWorkflow = new Workflow('New Workflow', 'New Description');
+    newWorkflow.id = 1;
+    oneWorkflow.owner = undefined;
+    await expect(
+      service.createWorkflow(
+        { id: 1 } as unknown as User,
+        'New Workflow',
+        'New Description',
+      ),
+    ).resolves.toEqual(newWorkflow);
+  });
+
+  it('should update a workflow', async () => {
+    const updatedWorkflow = new Workflow(
+      'Updated Workflow',
+      'Updated Description',
+    );
+    updatedWorkflow.id = 1;
+    updatedWorkflow.owner = undefined;
+    updatedWorkflow.status = WorkflowStatus.ENABLED;
+    updatedWorkflow.nodes = [];
+
+    await expect(
+      service.updateWorkflow(
+        null,
+        1,
+        WorkflowStatus.ENABLED,
+        'Updated Workflow',
+        'Updated Description',
+      ),
+    ).resolves.toStrictEqual(updatedWorkflow);
   });
 });
