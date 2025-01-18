@@ -65,6 +65,15 @@ export class Workflow extends Resource {
   status: WorkflowStatus;
 
   @ApiProperty({
+    description:
+      'Indicates whether the workflow was created on a mobile device or on the web',
+    example: false,
+    default: false,
+  })
+  @Column({ default: false })
+  mobile: boolean;
+
+  @ApiProperty({
     description: 'The owner of the Workflow',
     example: 1,
   })

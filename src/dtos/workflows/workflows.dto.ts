@@ -80,6 +80,15 @@ export class WorkflowCreateDTO {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @ApiProperty({
+    description:
+      'Indicates whether the workflow was created on a mobile device or on the web',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  mobile?: boolean;
 }
 
 export class WorkflowUpdateNodeDTO {
@@ -120,4 +129,13 @@ export class WorkflowUpdateNodeDTO {
     x: number;
     y: number;
   };
+
+  @ApiProperty({
+    description:
+      'Indicates whether the workflow was created on a mobile device or on the web',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  mobile?: boolean;
 }

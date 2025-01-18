@@ -140,6 +140,7 @@ export class WorkflowsService implements OnModuleInit {
       workflow.id = dbWorkflow.id;
       workflow.owner = dbWorkflow.owner;
       workflow.status = dbWorkflow.status;
+      workflow.mobile = dbWorkflow.mobile;
 
       const nodes = [];
       for (const node of dbWorkflow.nodes) {
@@ -504,6 +505,7 @@ export class WorkflowsService implements OnModuleInit {
       ownerId: workflow.owner.id,
       serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
       status: workflow.status,
+      mobile: workflow.mobile,
     } as WorkflowBasicInfo;
   }
 
@@ -597,6 +599,7 @@ export class WorkflowsService implements OnModuleInit {
     status: string,
     name: string,
     description: string,
+    mobile?: boolean,
   ): Promise<Workflow | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -616,6 +619,7 @@ export class WorkflowsService implements OnModuleInit {
     ) {
       return { error: 'Permission denied' };
     }
+    console.log(mobile);
 
     let statusToUpdate: WorkflowStatus | undefined;
     if (status) {
@@ -631,6 +635,7 @@ export class WorkflowsService implements OnModuleInit {
         name,
         description,
         status: statusToUpdate ? statusToUpdate : workflow.status,
+        mobile: mobile ? mobile : workflow.mobile,
       },
     );
 
@@ -641,6 +646,7 @@ export class WorkflowsService implements OnModuleInit {
     workflow.name = name || workflow.name;
     workflow.description = description || workflow.description;
     workflow.status = statusToUpdate ? statusToUpdate : workflow.status;
+    workflow.mobile = mobile ? mobile : workflow.mobile;
     return workflow;
   }
 
@@ -649,6 +655,7 @@ export class WorkflowsService implements OnModuleInit {
     name: string,
     description: string,
     status?: string,
+    mobile?: boolean,
   ): Promise<Workflow | { error: string }> {
     if (
       !(await this._permissionsService.can(performer, 'create', null, Workflow))
@@ -669,6 +676,7 @@ export class WorkflowsService implements OnModuleInit {
           id: performer.id,
         },
         status: statusToUpdate,
+        mobile: mobile || false,
       })
     ).id;
 
@@ -684,6 +692,7 @@ export class WorkflowsService implements OnModuleInit {
     workflow.id = dbWorkflow.id;
     workflow.owner = dbWorkflow.owner;
     workflow.status = dbWorkflow.status;
+    workflow.mobile = dbWorkflow.mobile;
     this.workflows.push(workflow);
     return workflow;
   }

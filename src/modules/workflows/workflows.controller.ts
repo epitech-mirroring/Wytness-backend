@@ -156,6 +156,7 @@ export class WorkflowsController {
       body.status,
       body.name,
       body.description,
+      body.mobile,
     );
     if ('error' in workflow) {
       throw new BadRequestException(workflow.error);
@@ -179,6 +180,7 @@ export class WorkflowsController {
       body.name,
       body.description,
       body.status,
+      body.mobile,
     );
     if ('error' in created) {
       throw new BadRequestException(created.error);
