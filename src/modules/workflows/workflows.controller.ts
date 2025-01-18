@@ -89,14 +89,14 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    const workflow = await this._workflowsService.getWorkflow(
+    const response = await this._workflowsService.getWorkflow(
       this._authContext.user,
       workflowIdN,
     );
-    if (workflow) {
-      return workflow;
+    if ('error' in response) {
+      return new BadRequestException(response.error);
     } else {
-      throw new NotFoundException('Workflow not found');
+      return response;
     }
   }
 
@@ -117,15 +117,12 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    if (
-      await this._workflowsService.deleteWorkflow(
-        this._authContext.user,
-        workflowIdN,
-      )
-    ) {
-      return;
-    } else {
-      throw new NotFoundException('Workflow not found');
+    const response = await this._workflowsService.deleteWorkflow(
+      this._authContext.user,
+      workflowIdN,
+    );
+    if (response) {
+      throw new BadRequestException(response.error);
     }
   }
 
@@ -253,9 +250,8 @@ export class WorkflowsController {
       nodeIdN,
     );
     if (response) {
-      return;
+      throw new BadRequestException(response);
     }
-    throw new NotFoundException('Node not found');
   }
 
   @Private()

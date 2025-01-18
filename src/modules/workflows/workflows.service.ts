@@ -510,13 +510,13 @@ export class WorkflowsService implements OnModuleInit {
   public async getWorkflow(
     performer: User,
     workflowId: number,
-  ): Promise<WorkflowBasicInfo | undefined> {
+  ): Promise<WorkflowBasicInfo | undefined | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return;
+      return { error: 'Workflow not found' };
     }
 
     if (
@@ -527,7 +527,7 @@ export class WorkflowsService implements OnModuleInit {
         Workflow,
       ))
     ) {
-      return;
+      return { error: 'Permission denied' };
     }
     const ownerId = await this._permissionsService.can(
       performer,
@@ -537,7 +537,7 @@ export class WorkflowsService implements OnModuleInit {
     );
 
     if (!ownerId) {
-      return;
+      return { error: 'Permission denied' };
     }
 
     return this.workflowToJsonObject(workflow);
@@ -546,13 +546,13 @@ export class WorkflowsService implements OnModuleInit {
   public async deleteWorkflow(
     performer: User,
     workflowId: number,
-  ): Promise<boolean> {
+  ): Promise<void | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
     );
 
     if (!workflow) {
-      return false;
+      return { error: 'Workflow not found' };
     }
 
     if (
@@ -563,7 +563,7 @@ export class WorkflowsService implements OnModuleInit {
         Workflow,
       ))
     ) {
-      return false;
+      return { error: 'Permission denied' };
     }
 
     const executions = await this._workflowExecutionRepository.find({
@@ -583,13 +583,12 @@ export class WorkflowsService implements OnModuleInit {
     });
 
     if (!dbWorkflow) {
-      return false;
+      return { error: 'Could not delete workflow' };
     }
 
     this.workflows = this.workflows.filter(
       (workflow) => workflow.id !== workflowId,
     );
-    return true;
   }
 
   public async updateWorkflow(
