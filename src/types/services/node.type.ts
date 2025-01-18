@@ -15,6 +15,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ExecutionsService } from '../../modules/workflows/executions.service';
+import process from 'node:process';
 
 export enum NodeType {
   TRIGGER = 'trigger',
@@ -36,7 +37,7 @@ export abstract class Node {
   @Column('text', { nullable: true })
   public description?: string;
   @Column({
-    type: 'enum',
+    type: 'simple-enum',
     enum: NodeType,
     default: NodeType.ACTION,
   })

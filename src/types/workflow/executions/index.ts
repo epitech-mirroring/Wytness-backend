@@ -12,8 +12,14 @@ export class WorkflowExecutionStatisticsDataUsed {
 }
 
 export class WorkflowExecutionStatisticsDuration {
-  @Column('timestamp')
+  @Column({
+    type: 'timestamp',
+    precision: 3,
+  })
   start: Date;
-  @Column('timestamp')
+  @Column({
+    type: 'timestamp',
+    precision: 3,
+  })
   end: Date;
 }

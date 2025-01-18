@@ -12,6 +12,7 @@ import { Actions, Resource } from '../permissions';
 import { WorkflowNode } from './nodes';
 import { WorkflowExecution } from './executions';
 import { NodeType } from '../services';
+import process from 'node:process';
 
 export type WorkflowBasicInfo = {
   id: number;
@@ -58,7 +59,7 @@ export class Workflow extends Resource {
     example: 'enabled',
   })
   @Column({
-    type: 'enum',
+    type: 'simple-enum',
     enum: WorkflowStatus,
     default: WorkflowStatus.DISABLED,
   })
