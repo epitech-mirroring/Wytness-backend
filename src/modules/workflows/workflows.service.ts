@@ -945,6 +945,9 @@ export class WorkflowsService implements OnModuleInit {
         },
       );
       node.previous = previous.next.find((n) => n.label === labelA);
+      workflow.strandedNodes = workflow.strandedNodes.filter(
+        (n) => n.id !== nodeId,
+      );
     }
 
     if (position) {
