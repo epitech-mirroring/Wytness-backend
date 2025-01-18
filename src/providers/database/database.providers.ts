@@ -17,6 +17,9 @@ export const databaseProviders = [
     provide: 'DATA_SOURCE',
     inject: [ConfigService],
     useFactory: (configService: ConfigService) => {
+      if (!configService.get<string>('DB_HOST')) {
+        return null;
+      }
       const dataSource = new DataSource({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
