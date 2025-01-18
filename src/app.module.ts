@@ -22,6 +22,7 @@ import {
 import { Code, Node, Service, ServiceUser } from './types/services';
 import { Webhook } from './types/webhook/webhook.type';
 import * as process from 'node:process';
+import { isProduction } from './types/global';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import * as process from 'node:process';
     DiscordModule,
     WorkflowsModule,
     StatisticsModule,
-    process.env.NODE_ENV !== 'test'
+    isProduction()
       ? TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST,
