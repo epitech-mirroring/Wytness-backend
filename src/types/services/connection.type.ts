@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Service } from './service.type';
 import { User } from '../user';
+import { columnTypeJson } from '../global';
 
 @Entity('service_users')
 export class ServiceUser {
@@ -20,7 +21,9 @@ export class ServiceUser {
   @JoinColumn()
   @ManyToOne(() => User, (user) => user.linkedServices)
   user: User;
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   customData: any;
   @CreateDateColumn()
   createdAt: Date;

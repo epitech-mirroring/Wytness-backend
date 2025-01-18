@@ -15,8 +15,8 @@ import {
 import { PermissionsService } from '../permissions/permissions.service';
 import { User } from '../../types/user';
 import { FlowControlService } from '../../services/flow_control/flow-control.service';
-import * as process from 'node:process';
 import { AirtableService } from '../../services/airtable/airtable.service';
+import { isProduction } from '../../types/global';
 
 @Injectable()
 export class ServicesService {
@@ -69,9 +69,7 @@ export class ServicesService {
           name: service.name,
           description: service.description,
           logo:
-            (process.env.NODE_ENV === 'development'
-              ? 'http://localhost:4040'
-              : 'https://wytness.fr') +
+            (!isProduction() ? 'http://localhost:4040' : 'https://wytness.fr') +
             '/api/services/' +
             service.name +
             '/logo.svg',

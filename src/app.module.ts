@@ -33,7 +33,7 @@ import * as process from 'node:process';
     DiscordModule,
     WorkflowsModule,
     StatisticsModule,
-    process.env.DB_HOST || process.env.NODE_ENV === 'test'
+    process.env.NODE_ENV !== 'test'
       ? TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST,

@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../user';
+import { columnTypeJson } from '../global';
 
 @Entity('codes')
 export class Code {
@@ -17,7 +18,9 @@ export class Code {
   code: number;
   @Column('text')
   source: string;
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   customData: any;
 
   @ManyToOne(() => User)

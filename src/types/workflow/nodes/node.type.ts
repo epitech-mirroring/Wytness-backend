@@ -9,6 +9,7 @@ import {
 import { Node } from '../../services';
 import { WorkflowNodeNext } from './node.next.type';
 import { Workflow } from '../workflow.type';
+import { columnTypeJson } from '../../global';
 
 export class Position {
   @Column('int', { default: 100 })
@@ -26,7 +27,9 @@ export class WorkflowNode {
   @ManyToOne(() => Node, { cascade: true, onDelete: 'CASCADE' })
   node: Node;
 
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   config: any;
 
   @JoinColumn()

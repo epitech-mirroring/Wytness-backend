@@ -19,3 +19,27 @@ export const base64_urlencode = (str: string | ArrayBuffer) => {
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 };
+
+export const columnTypeTimestamp = () => {
+  return useSqlite() ? 'bigint' : 'timestamp';
+};
+
+export const columnTypeJson = () => {
+  return useSqlite() ? 'simple-json' : 'jsonb';
+};
+
+export const columnTypeEnum = () => {
+  return useSqlite() ? 'simple-enum' : 'enum';
+};
+
+export const useSqlite = () => {
+  return getNodeEnv() === 'test';
+};
+
+export const getNodeEnv = () => {
+  return process.env.NODE_ENV;
+};
+
+export const isProduction = () => {
+  return getNodeEnv() !== 'development' && getNodeEnv() !== 'test';
+};

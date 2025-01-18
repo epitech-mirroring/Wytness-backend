@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PlayingMusicTrigger } from './nodes/triggers/status/playing.trigger';
 import { PausePlaybackAction } from './nodes/actions/player/pause.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
+import { isProduction } from '../../types/global';
 
 @Injectable()
 export class SpotifyService extends ServiceWithOAuth {
@@ -39,7 +40,7 @@ export class SpotifyService extends ServiceWithOAuth {
   }
 
   getRedirectUri(): string {
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction()) {
       return 'https://wytness.com/services/spotify/connect';
     }
     return 'http://localhost:3000/services/spotify/connect';

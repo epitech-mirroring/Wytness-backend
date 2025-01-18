@@ -8,6 +8,7 @@ import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { OAuthDefaultConfig, ServiceWithOAuth } from '../../types/services';
 import { ExecutionsService } from '../../modules/workflows/executions.service';
+import { isProduction } from '../../types/global';
 
 export type GatewayMessage = {
   op: number;
@@ -61,7 +62,7 @@ export class DiscordService extends ServiceWithOAuth {
   }
 
   getRedirectUri(): string {
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction()) {
       return 'https://wytness.fr/services/discord/connect';
     }
     return 'http://localhost:3000/services/discord/connect';
