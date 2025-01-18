@@ -7,6 +7,7 @@ import { SpotifyModule } from '../../services/spotify/spotify.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { FlowControlModule } from '../../services/flow_control/flow-control.module';
 import { AirtableModule } from '../../services/airtable/airtable.module';
+import { WeatherModule } from '../../services/weather/weather.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AirtableModule } from '../../services/airtable/airtable.module';
     forwardRef(() => SpotifyModule),
     forwardRef(() => FlowControlModule),
     forwardRef(() => AirtableModule),
+    forwardRef(() => WeatherModule),
   ],
   providers: [ServicesService],
   controllers: [ServicesController],

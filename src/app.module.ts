@@ -10,6 +10,7 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
 import { DatabaseModule } from './providers/database/database.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
+import { WeatherModule } from './services/weather/weather.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { WebhookModule } from './modules/webhook/webhook.module';
     FirebaseModule,
     AuthModule,
     ServicesModule,
+    WeatherModule,
     DiscordModule,
     WorkflowsModule,
     StatisticsModule,
