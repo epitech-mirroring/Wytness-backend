@@ -133,4 +133,31 @@ export class Workflow extends Resource {
       }
     }
   }
+
+  public toJson() {
+    const services = [];
+    const recursiveServiceSetup = (node: WorkflowNode) => {
+      services.push(node.node.service.name);
+      for (const next of node.next) {
+        for (const nextNode of next.next) {
+          recursiveServiceSetup(nextNode);
+        }
+      }
+    };
+    for (const node of this.entrypoints) {
+      recursiveServiceSetup(node);
+    }
+    for (const node of this.strandedNodes) {
+      recursiveServiceSetup(node);
+    }
+
+    return {
+      id: this.id,
+      name: this.name,
+      description: this.description,
+      ownerId: this.owner.id,
+      serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
+      status: this.status,
+    } as WorkflowBasicInfo;
+  }
 }

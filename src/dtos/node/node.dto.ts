@@ -1,4 +1,4 @@
-import { Field } from 'src/types/services/field.type';
+import { Field } from '../../types/services';
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 
 @ApiSchema({ name: 'NodeDTO' })

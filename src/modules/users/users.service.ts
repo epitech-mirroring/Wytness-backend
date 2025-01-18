@@ -2,13 +2,14 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { FullUser, ListUser, User } from '../../types/user';
 import { Repository } from 'typeorm';
 import { PermissionsService } from '../permissions/permissions.service';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
   @Inject()
   private _permissionsService: PermissionsService;
 
-  @Inject('USER_REPOSITORY')
+  @InjectRepository(User)
   private _repository: Repository<User>;
 
   async onModuleInit() {

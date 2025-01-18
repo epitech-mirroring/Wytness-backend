@@ -1,14 +1,18 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
-import { ServiceWithOAuth } from 'src/types/services/service.type';
-import { Trigger } from 'src/types/services/trigger.type';
-import { User } from 'src/types/user/user.type';
+import { ServiceWithOAuth } from '../../../../../types/services';
+import { Trigger } from '../../../../../types/services';
+import { User } from '../../../../../types/user';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 import { WorkflowExecutionTrace } from '../../../../../types/workflow';
+import { ExecutionsService } from '../../../../../modules/workflows/executions.service';
 
 @Injectable()
 export class PlayingMusicTrigger extends Trigger {
   @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  public _executions: ExecutionsService;
 
   constructor() {
     super('Playing Music', 'Trigger when the user is playing a music');
@@ -62,5 +66,9 @@ export class PlayingMusicTrigger extends Trigger {
 
   public getWorkflowService(): WorkflowsService {
     return this._w;
+  }
+
+  public getExecutionService(): ExecutionsService {
+    return this._executions;
   }
 }

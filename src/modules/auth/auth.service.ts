@@ -11,13 +11,14 @@ import { Repository } from 'typeorm';
 import { User } from '../../types/user';
 import { PermissionsService } from '../permissions/permissions.service';
 import * as process from 'node:process';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
   @Inject()
   private _authContext: AuthContext;
 
-  @Inject('USER_REPOSITORY')
+  @InjectRepository(User)
   private _userRepository: Repository<User>;
 
   @Inject()
@@ -33,7 +34,7 @@ export class AuthService {
       .then((decodedToken) => {
         return decodedToken;
       })
-      .catch((error) => {
+      .catch(() => {
         return null;
       });
     return !!decodedToken;

@@ -4,6 +4,7 @@ import { Action } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 import { AirtableService } from '../../../airtable.service';
+import { ExecutionsService } from '../../../../../modules/workflows/executions.service';
 
 @Injectable()
 export class ListBasesAction extends Action {
@@ -12,6 +13,9 @@ export class ListBasesAction extends Action {
 
   @Inject(forwardRef(() => WorkflowsService))
   public _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  public _executions: ExecutionsService;
 
   constructor() {
     super('List Bases', "List all bases in the user's account", ['output']);
@@ -36,5 +40,9 @@ export class ListBasesAction extends Action {
 
   public getWorkflowService(): WorkflowsService {
     return this._w;
+  }
+
+  public getExecutionService(): ExecutionsService {
+    return this._executions;
   }
 }

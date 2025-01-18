@@ -14,6 +14,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ExecutionsService } from '../../modules/workflows/executions.service';
 
 export enum NodeType {
   TRIGGER = 'trigger',
@@ -112,6 +113,8 @@ export abstract class Node {
 
   public abstract getWorkflowService(): WorkflowsService;
 
+  public abstract getExecutionService(): ExecutionsService;
+
   public async _run(
     label: string,
     data: any,
@@ -136,7 +139,7 @@ export abstract class Node {
       return;
     }
     for (const next of config._next[label]) {
-      await this.getWorkflowService().runNode(
+      await this.getExecutionService().runNode(
         next,
         result,
         workflowExecution,

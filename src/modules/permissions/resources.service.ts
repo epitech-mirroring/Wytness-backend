@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IdOf, Resource } from '../../types/permissions';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
 
 @Injectable()
 export class ResourcesService {
-  @Inject('DATA_SOURCE')
+  @InjectDataSource()
   private readonly _databaseService: DataSource;
 
   getResource = async <T extends Resource>(

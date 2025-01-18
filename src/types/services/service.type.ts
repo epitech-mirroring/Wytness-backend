@@ -16,6 +16,7 @@ import { ServiceUser } from './connection.type';
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 import { WorkflowExecutionTrace } from '../workflow';
 import { base64_urlencode } from '../global';
+import { InjectRepository } from '@nestjs/typeorm';
 
 export class ServiceMetadata {
   @Column('boolean')
@@ -72,10 +73,10 @@ export abstract class Service implements OnModuleInit {
     this.serviceMetadata = serviceMetadata || DefaultServiceMetadata;
   }
 
-  @Inject('SERVICE_REPOSITORY')
+  @InjectRepository(Service)
   private _serviceRepository: Repository<Service>;
 
-  @Inject('SERVICE_NODE_REPOSITORY')
+  @InjectRepository(Node)
   private _nodeRepository: Repository<Node>;
 
   async onModuleInit(): Promise<void> {
@@ -249,7 +250,7 @@ export abstract class ServiceWithAuth extends Service {
     super(name, description, nodes, serviceMetadata);
   }
 
-  @Inject('SERVICE_USER_REPOSITORY')
+  @InjectRepository(ServiceUser)
   protected _serviceUserRepository: Repository<ServiceUser>;
 
   public abstract isUserConnected(userId: number): Promise<boolean>;
@@ -539,7 +540,7 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     });
   }
 
-  @Inject('CODE_REPOSITORY')
+  @InjectRepository(Code)
   private _codeRepository: Repository<Code>;
 
   async isUserConnected(userId: number): Promise<boolean> {

@@ -5,11 +5,15 @@ import { WorkflowsService } from '../../../../../modules/workflows/workflows.ser
 import { Field, FieldType } from '../../../../../types/services/field.type';
 import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 import { User } from '../../../../../types/user';
+import { ExecutionsService } from '../../../../../modules/workflows/executions.service';
 
 @Injectable()
 export class DirectMessageCreatedTrigger extends Trigger {
   @Inject(forwardRef(() => WorkflowsService))
   public _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  public _executions: ExecutionsService;
 
   constructor() {
     super(
@@ -50,5 +54,9 @@ export class DirectMessageCreatedTrigger extends Trigger {
 
   public getWorkflowService(): WorkflowsService {
     return this._w;
+  }
+
+  public getExecutionService(): ExecutionsService {
+    return this._executions;
   }
 }

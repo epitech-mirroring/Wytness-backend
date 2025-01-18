@@ -6,17 +6,19 @@ import { Webhook } from '../../types/webhook/webhook.type';
 import { WorkflowNode } from '../../types/workflow';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { ServicesService } from '../services/services.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ExecutionsService } from '../workflows/executions.service';
 
 @Injectable()
 export class WebhookService {
-  @Inject('WEBHOOK_REPOSITORY')
+  @InjectRepository(Webhook)
   private readonly _webhookRepository: Repository<Webhook>;
 
   @Inject()
   private readonly _services: ServicesService;
 
   @Inject()
-  private readonly _workflows: WorkflowsService;
+  private readonly _executions: ExecutionsService;
 
   public async createWebhook(
     forUser: User,
@@ -62,7 +64,7 @@ export class WebhookService {
         webhook.owner,
       );
     } else if (webhook.node) {
-      await this._workflows.findAndTriggerGlobal(data, webhook.node.id);
+      await this._executions.findAndTriggerGlobal(data, webhook.node.id);
     }
   }
 

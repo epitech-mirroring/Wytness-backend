@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { DiscordService } from '../../services/discord/discord.service';
-import { SpotifyService } from 'src/services/spotify/spotify.service';
+import { SpotifyService } from '../../services/spotify/spotify.service';
 import {
   Action,
   ListService,

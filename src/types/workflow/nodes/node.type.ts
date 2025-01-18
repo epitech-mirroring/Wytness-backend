@@ -23,7 +23,7 @@ export class WorkflowNode {
   id: number;
 
   @JoinColumn()
-  @ManyToOne(() => Node, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Node, { cascade: true, onDelete: 'CASCADE' })
   node: Node;
 
   @Column('simple-json')
@@ -85,5 +85,20 @@ export class WorkflowNode {
       next.next = [];
     }
     next.next.push(node);
+  }
+
+  public toJson() {
+    return {
+      id: this.id,
+      config: this.config,
+      nodeId: this.node.id,
+      next: (this.next ? this.next : []).map((next) => {
+        return {
+          label: next.label,
+          next: next.next.map((node) => node.toJson()),
+        };
+      }),
+      position: this.position,
+    };
   }
 }
