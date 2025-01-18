@@ -34,6 +34,7 @@
     "class-validator": "^0.14.1",
     "firebase": "^11.0.2",
     "firebase-admin": "^13.0.1",
+    "jest-teamcity-reporter": "^0.9.0",
     "nj-request-scope": "^1.0.8",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
@@ -80,6 +81,7 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
+    "testResultsProcessor": "jest-teamcity-reporter",
     "testEnvironment": "node"
   }
 }
