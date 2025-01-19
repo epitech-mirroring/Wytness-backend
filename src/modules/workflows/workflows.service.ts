@@ -195,19 +195,20 @@ export class WorkflowsService implements OnModuleInit {
 
       if ('timeframe' in options) {
         if ('start' in options.timeframe) {
-          authorizedWorkflows = authorizedWorkflows.filter(
-            (workflow) =>
-              workflow.__executions.filter(
+          authorizedWorkflows = authorizedWorkflows.filter((workflow) => {
+            return (
+              (workflow.__executions || []).filter(
                 (execution: WorkflowExecution) =>
                   execution.statistics.duration.start >=
                   options.timeframe.start,
-              ).length > 0,
-          );
+              ).length > 0
+            );
+          });
         }
         if ('end' in options.timeframe) {
           authorizedWorkflows = authorizedWorkflows.filter(
             (workflow) =>
-              workflow.__executions.filter(
+              (workflow.__executions || []).filter(
                 (execution: WorkflowExecution) =>
                   execution.statistics.duration.end <= options.timeframe.end,
               ).length > 0,
@@ -249,7 +250,7 @@ export class WorkflowsService implements OnModuleInit {
           }
         };
         authorizedWorkflows = authorizedWorkflows.map((workflow) => {
-          workflow.__executions = workflow.__executions.sort((a, b) => {
+          workflow.__executions = (workflow.__executions || []).sort((a, b) => {
             const aStat = getStat(a, options.sort);
             const bStat = getStat(b, options.sort);
             if (aStat > bStat) {
