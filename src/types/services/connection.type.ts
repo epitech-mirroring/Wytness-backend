@@ -23,6 +23,7 @@ export class ServiceUser {
   user: User;
   @Column({
     type: columnTypeJson(),
+    default: {},
   })
   customData: any;
   @CreateDateColumn()

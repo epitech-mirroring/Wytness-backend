@@ -29,6 +29,7 @@ export class WorkflowNode {
 
   @Column({
     type: columnTypeJson(),
+    default: {},
   })
   config: any;
 

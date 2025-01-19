@@ -20,14 +20,17 @@ export class WorkflowExecutionTrace {
   node: Node;
   @Column({
     type: columnTypeJson(),
+    default: {},
   })
   input: any;
   @Column({
     type: columnTypeJson(),
+    default: {},
   })
   output: any;
   @Column({
     type: columnTypeJson(),
+    default: {},
   })
   config: any;
 
