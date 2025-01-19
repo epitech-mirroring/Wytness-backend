@@ -12,6 +12,7 @@ import { NodesService } from './nodes.service';
 import { ServicesService } from '../services/services.service';
 import { User } from '../../types/user';
 import { PermissionsService } from '../permissions/permissions.service';
+import { MinimalConfig, Trigger } from '../../types/services';
 
 @Injectable()
 export class ExecutionsService {
@@ -192,6 +193,71 @@ export class ExecutionsService {
           }
         }
       }
+    }
+  }
+
+  crons: { [key: number]: NodeJS.Timeout } = {};
+
+  public startCronForWorkflow(workflowId: number) {
+    if (this.crons[workflowId]) {
+      return;
+    }
+    this.crons[workflowId] = setInterval(async () => {
+      const workflow = await this._workflowsService.getWorkflow(workflowId);
+
+      if (!workflow.entrypoints || workflow.entrypoints.length === 0) {
+        return;
+      }
+      if (workflow.status !== WorkflowStatus.ENABLED) {
+        return;
+      }
+      for (const entrypoint of workflow.entrypoints) {
+        const triggerNode = entrypoint.node as Trigger;
+        if (!triggerNode) {
+          continue;
+        }
+        const service = this._servicesService.getServiceFromNode(
+          triggerNode.id,
+        );
+        if (!service || !service.needCron()) {
+          continue;
+        }
+
+        for (const label of triggerNode.labels) {
+          const shouldRun = await triggerNode.isTriggered(
+            label,
+            workflow.owner,
+            entrypoint.config,
+          );
+
+          if (shouldRun) {
+            const execution = new WorkflowExecution(workflow);
+            const nexts: { [key: string]: number[] } = {};
+            for (const next of entrypoint.next) {
+              nexts[next.label] = next.next.map((node) => node.id);
+            }
+            await triggerNode._run(
+              label,
+              {},
+              {
+                ...entrypoint.config,
+                user: workflow.owner,
+                _workflowId: workflow.id,
+                _next: nexts,
+              } as MinimalConfig & any,
+              execution,
+              null,
+            );
+            await this.saveExecution(execution);
+          }
+        }
+      }
+    }, 1000);
+  }
+
+  public stopCronForWorkflow(workflow: Workflow) {
+    if (this.crons[workflow.id]) {
+      clearInterval(this.crons[workflow.id]);
     }
   }
 }

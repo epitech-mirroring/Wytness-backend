@@ -7,6 +7,7 @@ import { User } from '../../types/user';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ServicesService } from '../services/services.service';
 import { NodeType } from '../../types/services';
+import { ExecutionsService } from './executions.service';
 
 @Injectable()
 export class NodesService {
@@ -18,6 +19,9 @@ export class NodesService {
 
   @Inject(forwardRef(() => WorkflowsService))
   private _workflowsService: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  private _executionsService: ExecutionsService;
 
   @Inject()
   private _permissionsService: PermissionsService;
@@ -456,6 +460,14 @@ export class NodesService {
         return r;
       }
     }
+
+    const needCron = workflow.entrypoints.some((node) => {
+      return node.node.service.serviceMetadata.useCron;
+    });
+    if (!needCron) {
+      this._executionsService.stopCronForWorkflow(workflow);
+    }
+
     return node;
   }
 
@@ -487,6 +499,13 @@ export class NodesService {
 
     if (await this.getNode(workflowId, nodeId)) {
       return { error: 'Could not delete node' };
+    }
+
+    const needCron = workflow.entrypoints.some((node) => {
+      return node.node.service.serviceMetadata.useCron;
+    });
+    if (!needCron) {
+      this._executionsService.stopCronForWorkflow(workflow);
     }
   }
 

@@ -85,55 +85,6 @@ export class WorkflowsService implements OnModuleInit {
         await this.loadWorkflow(dbWorkflow.id);
       }
     }, 1000);
-
-    // setInterval(async () => {
-    //   workflow: for (const workflow of this.workflows) {
-    //     for (const entrypoint of workflow.entrypoints) {
-    //       const triggerNode = entrypoint.node as Trigger;
-    //       if (!triggerNode) {
-    //         continue;
-    //       }
-    //       if (workflow.status !== WorkflowStatus.ENABLED) {
-    //         continue workflow;
-    //       }
-    //       const service = this._servicesService.getServiceFromNode(
-    //         triggerNode.id,
-    //       );
-    //       if (!service || !service.needCron()) {
-    //         continue;
-    //       }
-    //
-    //       for (const label of triggerNode.labels) {
-    //         const shouldRun = await triggerNode.isTriggered(
-    //           label,
-    //           workflow.owner,
-    //           entrypoint.config,
-    //         );
-    //
-    //         if (shouldRun) {
-    //           const execution = new WorkflowExecution(workflow);
-    //           const nexts: { [key: string]: number[] } = {};
-    //           for (const next of entrypoint.next) {
-    //             nexts[next.label] = next.next.map((node) => node.id);
-    //           }
-    //           await triggerNode._run(
-    //             label,
-    //             {},
-    //             {
-    //               ...entrypoint.config,
-    //               user: workflow.owner,
-    //               _workflowId: workflow.id,
-    //               _next: nexts,
-    //             } as MinimalConfig & any,
-    //             execution,
-    //             null,
-    //           );
-    //           await this.saveExecution(execution);
-    //         }
-    //       }
-    //     }
-    //   }
-    // }, 1000);
   }
 
   public async loadWorkflow(workflowId: number): Promise<Workflow> {
@@ -162,6 +113,13 @@ export class WorkflowsService implements OnModuleInit {
     this.workflows.push(newWorkflow);
 
     await this.loadWorkflowNodes(newWorkflow);
+
+    const needCron = newWorkflow.entrypoints.some(
+      (node) => node.node.service.serviceMetadata.useCron,
+    );
+    if (needCron) {
+      this._executionService.startCronForWorkflow(newWorkflow.id);
+    }
 
     return newWorkflow;
   }

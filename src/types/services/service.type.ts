@@ -501,7 +501,7 @@ export abstract class ServiceWithOAuth extends ServiceWithAuth {
         await this.refreshAccessToken(user.id);
         return this.fetchWithOAuth(user, trace, url, options);
       }
-      this.error(result.status);
+      this.error(result.status, await result.text());
       throw new Error('Failed to fetch data');
     }
 
