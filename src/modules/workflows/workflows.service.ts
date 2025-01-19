@@ -539,7 +539,7 @@ export class WorkflowsService implements OnModuleInit {
     const flattenNodes = (nodes: WorkflowNode[]): any[] => {
       const flatNodes = [];
       for (const node of nodes) {
-        flatNodes.push(node.toJson());
+        flatNodes.push(node.toJSON());
       }
       return flatNodes;
     };

@@ -12,7 +12,6 @@ import { Actions, Resource } from '../permissions';
 import { WorkflowNode } from './nodes';
 import { WorkflowExecution } from './executions';
 import { NodeType } from '../services';
-import process from 'node:process';
 import { columnTypeEnum } from '../global';
 
 export type WorkflowBasicInfo = {
@@ -136,7 +135,7 @@ export class Workflow extends Resource {
     }
   }
 
-  public toJson() {
+  public toJSON() {
     const services = [];
     const recursiveServiceSetup = (node: WorkflowNode) => {
       services.push(node.node.service.name);
@@ -161,5 +160,13 @@ export class Workflow extends Resource {
       serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
       status: this.status,
     } as WorkflowBasicInfo;
+  }
+
+  public stringify() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString() {
+    return this.stringify();
   }
 }

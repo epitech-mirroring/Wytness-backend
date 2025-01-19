@@ -166,7 +166,7 @@ export class WorkflowsController {
     if ('error' in workflow) {
       throw new BadRequestException(workflow.error);
     }
-    return workflow.toJson();
+    return workflow.toJSON();
   }
 
   @Private()
@@ -189,7 +189,7 @@ export class WorkflowsController {
     if ('error' in created) {
       throw new BadRequestException(created.error);
     }
-    return created.toJson();
+    return created.toJSON();
   }
 
   @Private()
@@ -308,7 +308,7 @@ export class WorkflowsController {
     if ('error' in response) {
       throw new BadRequestException(response.error);
     }
-    return response.toJson();
+    return response.toJSON();
   }
 
   @Private()
@@ -347,6 +347,6 @@ export class WorkflowsController {
     if ('error' in response) {
       throw new BadRequestException(response.error);
     }
-    return response.toJson();
+    return response.toJSON();
   }
 }

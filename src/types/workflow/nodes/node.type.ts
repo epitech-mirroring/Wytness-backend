@@ -61,6 +61,7 @@ export class WorkflowNode {
   constructor(id: number, config: any) {
     this.id = id;
     this.config = config;
+    this['toJSON'] = this.toJSON;
   }
 
   public addNext(node: WorkflowNode, label: string) {
@@ -90,7 +91,7 @@ export class WorkflowNode {
     next.next.push(node);
   }
 
-  public toJson() {
+  public toJSON() {
     return {
       id: this.id,
       config: this.config,
@@ -98,10 +99,18 @@ export class WorkflowNode {
       next: (this.next ? this.next : []).map((next) => {
         return {
           label: next.label,
-          next: next.next.map((node) => node.toJson()),
+          next: next.next.map((node) => node.toJSON()),
         };
       }),
       position: this.position,
     };
+  }
+
+  public stringify() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString() {
+    return this.stringify();
   }
 }

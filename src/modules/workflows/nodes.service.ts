@@ -25,43 +25,6 @@ export class NodesService {
   @Inject(forwardRef(() => ServicesService))
   private _servicesService: ServicesService;
 
-  private async recursiveEntrypointSetup(
-    initial: WorkflowNode,
-  ): Promise<WorkflowNode> {
-    const dbNext = await this._workflowNodeNextRepository.find({
-      where: { parent: { id: initial.id } },
-      relations: [
-        'next',
-        'next.previous',
-        'next',
-        'next.node',
-        'next.node.service',
-      ],
-    });
-
-    const builtNext = [];
-
-    for (const next of dbNext) {
-      const nextNodes = [];
-      const label = next.label;
-      for (const node of next.next) {
-        let nextNode = new WorkflowNode(node.id, node.config);
-        nextNode.node = node.node;
-        nextNode.previous = node.previous;
-        nextNode.position = node.position;
-        nextNode = await this.recursiveEntrypointSetup(nextNode);
-        nextNodes.push(nextNode);
-      }
-      builtNext.push({
-        label,
-        next: nextNodes,
-      });
-    }
-
-    initial.next = builtNext;
-    return initial;
-  }
-
   private recursiveFindNode(
     node: WorkflowNode,
     nodeId: number,

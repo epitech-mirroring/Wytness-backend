@@ -1,5 +1,5 @@
 import { Node } from './node.type';
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Trigger } from './trigger.type';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { User } from '../user';
@@ -218,6 +218,23 @@ export abstract class Service implements OnModuleInit {
     trace.statistics.dataUsed.download += receivedSize;
     return response;
   };
+
+  public toJSON() {
+    return {
+      name: this.name,
+      description: this.description,
+      nodes: this.nodes.map((node) => node.toJSON(false)),
+      serviceMetadata: this.serviceMetadata,
+    };
+  }
+
+  public stringify() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString() {
+    return this.stringify();
+  }
 }
 
 export type OAuthEndpoints = {
