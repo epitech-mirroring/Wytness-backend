@@ -186,6 +186,9 @@ export class WorkflowsService implements OnModuleInit {
             performer,
             workflow.id,
           );
+          if (!workflow.__executions) {
+            workflow.__executions = [];
+          }
           return workflow;
         }),
       );
