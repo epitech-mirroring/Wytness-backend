@@ -232,7 +232,7 @@ export class ServicesController {
       name: node.getName(),
       description: node.getDescription(),
       type: node.type,
-      fields: this._authContext.authenticated ? node.getFields() : undefined,
+      fields: node.getFields(),
       labels: node.labels,
     }));
     return nodeDTO;

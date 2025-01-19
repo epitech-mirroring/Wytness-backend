@@ -15,9 +15,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ExecutionsService } from '../../modules/workflows/executions.service';
-import process from 'node:process';
 import { columnTypeEnum } from '../global';
-import { stringify } from 'ts-jest';
 
 export enum NodeType {
   TRIGGER = 'trigger',

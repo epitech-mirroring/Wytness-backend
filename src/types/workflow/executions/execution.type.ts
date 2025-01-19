@@ -94,6 +94,7 @@ export class WorkflowExecution {
     this.status = WorkflowExecutionStatus.RUNNING;
     this.statistics = new WorkflowExecutionStatistics();
     this.traceMap = new Map();
+    this['toJSON'] = this.toJSON;
   }
 
   addOldData(trace: WorkflowExecutionTrace, parentTraceUUID: string) {
@@ -105,5 +106,15 @@ export class WorkflowExecution {
         trace.setData(parentTrace.getData(), parentTrace.getIndex());
       }
     }
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      workflow: this.workflow.toJSON(),
+      statistics: this.statistics,
+      status: this.status,
+      trace: this.trace.toJSON(),
+    };
   }
 }

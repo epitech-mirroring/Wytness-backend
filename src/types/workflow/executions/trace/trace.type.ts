@@ -72,6 +72,7 @@ export class WorkflowExecutionTrace {
     }
     this.index = 0;
     this.data = {};
+    this['toJSON'] = this.toJSON;
   }
 
   public setData(data: any, index: number): void {
@@ -425,5 +426,19 @@ export class WorkflowExecutionTrace {
     const withFunctions = this.processFunctions(withVariables);
     const withArithmetic = this.processArithmetic(withFunctions);
     return withArithmetic;
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      node: this.node.toJSON(),
+      input: this.input,
+      output: this.output,
+      config: this.config,
+      warnings: this.warnings,
+      errors: this.errors,
+      statistics: this.statistics,
+      next: this.next ? this.next.map((next) => next.toJSON()) : [],
+    };
   }
 }
