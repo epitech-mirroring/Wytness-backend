@@ -1,23 +1,45 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkflowsService } from './workflows.service';
 import { Repository } from 'typeorm';
-import { Workflow, WorkflowStatus } from '../../types/workflow';
+import { Workflow, WorkflowNode, WorkflowStatus } from '../../types/workflow';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ExecutionsService } from './executions.service';
 import { NodesService } from './nodes.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ServicesService } from '../services/services.service';
 import { User } from '../../types/user';
+import { DiscordService } from '../../services/discord/discord.service';
+import { DirectMessageSendAction } from '../../services/discord/nodes/actions/direct-messages/send.action';
+import { DirectMessageCreatedTrigger } from '../../services/discord/nodes/triggers/direct-messages/create.trigger';
+import { DirectMessageReactAction } from '../../services/discord/nodes/actions/direct-messages/react.action';
+
+const dmSend = new DirectMessageSendAction();
+const dmReceive = new DirectMessageCreatedTrigger();
+const react = new DirectMessageReactAction();
+const discordService = new DiscordService(dmReceive, dmSend, react);
+dmSend.service = discordService;
+dmReceive.service = discordService;
+react.service = discordService;
+
+const nodeTrigger = new WorkflowNode(9768, 'Test Node');
+nodeTrigger.previous = null;
+nodeTrigger.node = dmReceive;
+nodeTrigger.config = {};
+nodeTrigger.next = [{ id: 1, parent: nodeTrigger, label: 'Next', next: [] }];
 
 const oneWorkflow = new Workflow('Test Workflow', 'Test Description');
 oneWorkflow.id = 1;
 oneWorkflow.nodes = [];
+oneWorkflow.entrypoints = [nodeTrigger];
+oneWorkflow.nodes = [nodeTrigger];
 oneWorkflow.owner = undefined;
 const workflowArray: Workflow[] = [oneWorkflow];
 
 describe('Workflows Service', () => {
   let service: WorkflowsService;
   let repository: Repository<Workflow>;
+  let executionsService: ExecutionsService;
+  let nodesService: NodesService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -27,12 +49,16 @@ describe('Workflows Service', () => {
           provide: ExecutionsService,
           useValue: {
             runNode: jest.fn(),
+            getExecutions: jest.fn().mockResolvedValue([{ id: 10 }]),
+            deleteExecution: jest.fn().mockResolvedValue(true),
           },
         },
         {
           provide: NodesService,
           useValue: {
             getNode: jest.fn(),
+            loadNodeTree: jest.fn().mockResolvedValue(nodeTrigger),
+            deleteNode: jest.fn(),
           },
         },
         {
@@ -64,6 +90,8 @@ describe('Workflows Service', () => {
 
     service = module.get<WorkflowsService>(WorkflowsService);
     repository = module.get<Repository<Workflow>>(getRepositoryToken(Workflow));
+    executionsService = module.get<ExecutionsService>(ExecutionsService);
+    nodesService = module.get<NodesService>(NodesService);
 
     await service.onModuleInit();
   });
@@ -78,6 +106,10 @@ describe('Workflows Service', () => {
 
   it('should return a workflow', async () => {
     await expect(service.getWorkflow(1)).resolves.toEqual(oneWorkflow);
+  });
+
+  it("shouldn't return a workflow", async () => {
+    await expect(service.getWorkflow(2)).resolves.toEqual(undefined);
   });
 
   it('should list all workflows', async () => {
@@ -95,18 +127,14 @@ describe('Workflows Service', () => {
         'New Description',
       ),
     ).resolves.toEqual(newWorkflow);
+
+    expect(service.getAll()).toEqual([oneWorkflow, newWorkflow]);
   });
 
   it('should update a workflow', async () => {
-    const updatedWorkflow = new Workflow(
-      'Updated Workflow',
-      'Updated Description',
-    );
-    updatedWorkflow.id = 1;
-    updatedWorkflow.owner = undefined;
-    updatedWorkflow.status = WorkflowStatus.ENABLED;
-    updatedWorkflow.nodes = [];
-
+    oneWorkflow.status = WorkflowStatus.ENABLED;
+    oneWorkflow.description = 'Updated Description';
+    oneWorkflow.name = 'Updated Workflow';
     await expect(
       service.updateWorkflow(
         null,
@@ -115,6 +143,16 @@ describe('Workflows Service', () => {
         'Updated Workflow',
         'Updated Description',
       ),
-    ).resolves.toStrictEqual(updatedWorkflow);
+    ).resolves.toStrictEqual(oneWorkflow);
+
+    expect(service.getAll()).toEqual([oneWorkflow]);
+  });
+
+  it('should delete a workflow', async () => {
+    await expect(service.deleteWorkflow(null, 1)).resolves.toEqual(true);
+    expect(executionsService.deleteExecution).toHaveBeenCalledWith(null, 10);
+    expect(repository.delete).toHaveBeenCalledWith({ id: 1 });
+    expect(nodesService.deleteNode).toHaveBeenCalledWith(null, 1, 9768);
+    expect(service.getAll()).toEqual([]);
   });
 });

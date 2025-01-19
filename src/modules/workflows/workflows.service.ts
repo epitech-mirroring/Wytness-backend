@@ -14,6 +14,7 @@ import { ListOptions } from '../../types/global';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ExecutionsService } from './executions.service';
 import { NodesService } from './nodes.service';
+import { NodeType } from '../../types/services';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
@@ -77,27 +78,10 @@ export class WorkflowsService implements OnModuleInit {
       'allow',
     );
 
-    const dbWorkflows = await this._workflowRepository.find({
-      relations: [
-        'owner',
-        'nodes',
-        'nodes.node',
-        'nodes.previous',
-        'nodes.previous.parent',
-        'nodes.node.service',
-      ],
-    });
+    const dbWorkflows = await this._workflowRepository.find();
 
     for (const dbWorkflow of dbWorkflows) {
-      const workflow = new Workflow(dbWorkflow.name, dbWorkflow.description);
-      workflow.id = dbWorkflow.id;
-      workflow.owner = dbWorkflow.owner;
-      workflow.status = dbWorkflow.status;
-      workflow.nodes = [];
-      workflow.entrypoints = [];
-      workflow.strandedNodes = [];
-
-      this.workflows.push(workflow);
+      await this.loadWorkflow(dbWorkflow.id);
     }
 
     // setInterval(async () => {
@@ -148,6 +132,68 @@ export class WorkflowsService implements OnModuleInit {
     //     }
     //   }
     // }, 1000);
+  }
+
+  public async loadWorkflow(workflowId: number): Promise<Workflow> {
+    const workflow = await this._workflowRepository.findOne({
+      where: { id: workflowId },
+      relations: ['owner'],
+    });
+
+    if (!workflow) {
+      return;
+    }
+
+    const newWorkflow = new Workflow(workflow.name, workflow.description);
+    newWorkflow.id = workflow.id;
+    newWorkflow.owner = workflow.owner;
+    newWorkflow.status = workflow.status;
+    newWorkflow.nodes = [];
+    newWorkflow.entrypoints = [];
+    newWorkflow.strandedNodes = [];
+
+    await this.loadWorkflowNodes(newWorkflow);
+
+    this.workflows.push(newWorkflow);
+    return newWorkflow;
+  }
+
+  public async loadWorkflowNodes(workflow: Workflow): Promise<void> {
+    const workflowWithNodes = await this._workflowRepository.findOne({
+      where: { id: workflow.id },
+      relations: ['nodes'],
+    });
+
+    if (!workflowWithNodes) {
+      return;
+    }
+
+    const nodesWithNoPrevious = workflowWithNodes.nodes.filter(
+      (node) => node.previous === null,
+    );
+
+    for (const node of nodesWithNoPrevious) {
+      const workflowNode: WorkflowNode = await this._nodesService.loadNodeTree(
+        node.id,
+      );
+      if (workflowNode.node.type === NodeType.TRIGGER) {
+        workflow.entrypoints.push(workflowNode);
+      } else {
+        workflow.strandedNodes.push(workflowNode);
+      }
+      workflowNode.workflow = workflow;
+      const recursiveAdd = (node: WorkflowNode, workflow: Workflow) => {
+        for (const next of node.next) {
+          for (const n of next.next) {
+            n.workflow = workflow;
+            workflow.nodes.push(n);
+            recursiveAdd(n, workflow);
+          }
+        }
+      };
+      recursiveAdd(workflowNode, workflow);
+      workflow.nodes.push(workflowNode);
+    }
   }
 
   public getWorkflowByName(name: string): Workflow | undefined {

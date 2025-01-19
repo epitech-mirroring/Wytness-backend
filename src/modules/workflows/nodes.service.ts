@@ -500,4 +500,41 @@ export class NodesService {
       return { error: 'Could not delete node' };
     }
   }
+
+  async loadNodeTree(nodeId: number): Promise<WorkflowNode | undefined> {
+    const dbNode = await this._workflowNodeRepository.findOne({
+      where: { id: nodeId },
+      relations: ['next', 'next.next', 'node', 'node.service'],
+    });
+
+    if (!dbNode) {
+      return undefined;
+    }
+
+    const node = new WorkflowNode(dbNode.id, dbNode.config);
+    node.node = this._servicesService.getNode(dbNode.node.id);
+    node.position = dbNode.position;
+    node.previous = null;
+    node.next = await Promise.all(
+      dbNode.next.map(async (next) => {
+        return {
+          id: next.id,
+          label: next.label,
+          parent: node,
+          next: await Promise.all(
+            next.next.map(async (n) => {
+              const node = await this.loadNodeTree(n.id);
+              if (!node) {
+                throw new Error('Node not found');
+              }
+              node.previous = next;
+              return node;
+            }),
+          ),
+        };
+      }),
+    );
+    node.workflow = null;
+    return node;
+  }
 }
