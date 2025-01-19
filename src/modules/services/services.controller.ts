@@ -17,6 +17,7 @@ import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { AuthContext } from '../auth/auth.context';
 import {
   ListService,
+  NodeType,
   ServiceWithCode,
   ServiceWithOAuth,
 } from '../../types/services';
@@ -33,6 +34,7 @@ import {
 import { Public } from '../auth/decorators/public.decorator';
 import * as fs from 'fs';
 import { Response } from 'express';
+import { isProduction } from '../../types/global';
 
 @ApiTags('Services')
 @Controller('services')
@@ -320,5 +322,39 @@ export class ServicesController {
     }
     response.appendHeader('Content-Type', 'image/svg+xml');
     response.send(content);
+  }
+
+  @Public()
+  @Get('/about.json')
+  public async getAbout() {
+    return {
+      client: {
+        host: isProduction() ? 'https://wytness.fr' : 'http://localhost:3000',
+      },
+      server: {
+        current_time: Date.now(),
+        services: this._servicesService.services.map((service) => {
+          return {
+            name: service.name,
+            actions: service.nodes
+              .filter((node) => node.type === NodeType.TRIGGER)
+              .map((node) => {
+                return {
+                  name: node.getName(),
+                  description: node.getDescription(),
+                };
+              }),
+            reactions: service.nodes
+              .filter((node) => node.type === NodeType.ACTION)
+              .map((node) => {
+                return {
+                  name: node.getName(),
+                  description: node.getDescription(),
+                };
+              }),
+          };
+        }),
+      },
+    };
   }
 }
