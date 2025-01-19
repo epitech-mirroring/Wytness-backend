@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { MinimalConfig, Node } from '../../../services';
 import { WorkflowTraceStatistics } from './statistics.type';
-import { columnTypeJson } from '../../../global';
+import { columnTypeJson, useSqlite } from '../../../global';
 
 @Entity('workflow_traces')
 export class WorkflowExecutionTrace {
@@ -20,17 +20,17 @@ export class WorkflowExecutionTrace {
   node: Node;
   @Column({
     type: columnTypeJson(),
-    default: {},
+    default: useSqlite() ? '{}' : {},
   })
   input: any;
   @Column({
     type: columnTypeJson(),
-    default: {},
+    default: useSqlite() ? '{}' : {},
   })
   output: any;
   @Column({
     type: columnTypeJson(),
-    default: {},
+    default: useSqlite() ? '{}' : {},
   })
   config: any;
 
