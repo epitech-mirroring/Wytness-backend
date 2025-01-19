@@ -177,4 +177,34 @@ export class AuthService {
   public resetAuthContext() {
     this._authContext.user = undefined;
   }
+
+  public async syncUser(idToken: string): Promise<void | { error: string }> {
+    const r = await this.firebaseService.getApp().auth().verifyIdToken(idToken);
+
+    if (!r) {
+      return { error: 'Firebase: Error (could not verify token)' };
+    }
+
+    const firebaseId = r.uid;
+    const userAlreadyExists = !!(await this._userRepository.findOne({
+      where: { firebaseId },
+    }));
+
+    if (userAlreadyExists) {
+      return;
+    }
+
+    const id = (
+      await this._userRepository.insert({
+        firebaseId,
+        email: r.email,
+        name: r.name,
+        surname: r.surname,
+      })
+    ).identifiers[0].id;
+
+    await this._permissionsService.addPolicyToUser(id, 'User');
+
+    return;
+  }
 }

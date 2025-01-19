@@ -1,4 +1,11 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UnauthorizedException,
+  BadRequestException,
+  Headers,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto, RegisterDto } from '../../dtos/auth/auth.dto';
 import { ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
@@ -73,5 +80,20 @@ export class AuthController {
       return token;
     }
     throw new UnauthorizedException(token.error);
+  }
+
+  @Public()
+  @Post('sync')
+  public async syncUser(@Headers() headers: any) {
+    const hasAuthorization = headers.authorization;
+    if (!hasAuthorization) {
+      throw new UnauthorizedException();
+    }
+    const token = hasAuthorization.split(' ')[1];
+    const user = await this.authService.syncUser(token);
+
+    if (user) {
+      throw new BadRequestException(user.error);
+    }
   }
 }
