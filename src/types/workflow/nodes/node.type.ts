@@ -53,7 +53,7 @@ export class WorkflowNode {
   next: WorkflowNodeNext[];
 
   @JoinColumn()
-  @ManyToOne(() => Workflow)
+  @ManyToOne(() => Workflow, { cascade: true, onDelete: 'CASCADE' })
   workflow: any;
 
   @Column(() => Position)

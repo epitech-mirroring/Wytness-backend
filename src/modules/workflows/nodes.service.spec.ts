@@ -10,6 +10,7 @@ import { WorkflowsService } from './workflows.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ServicesService } from '../services/services.service';
 import { Action, Trigger } from '../../types/services';
+import { ExecutionsService } from './executions.service';
 
 describe('NodesService', () => {
   let service: NodesService;
@@ -158,6 +159,14 @@ describe('NodesService', () => {
                 }
                 return null;
               }),
+          },
+        },
+
+        {
+          provide: ExecutionsService,
+          useValue: {
+            getExecutions: jest.fn().mockResolvedValue([]),
+            stopCronForWorkflow: jest.fn().mockResolvedValue(true),
           },
         },
       ],
