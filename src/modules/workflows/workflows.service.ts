@@ -517,6 +517,9 @@ export class WorkflowsService implements OnModuleInit {
     workflow.id = dbWorkflow.id;
     workflow.owner = dbWorkflow.owner;
     workflow.status = dbWorkflow.status;
+    workflow.nodes = [];
+    workflow.entrypoints = [];
+    workflow.strandedNodes = [];
     this.workflows.push(workflow);
     return workflow;
   }

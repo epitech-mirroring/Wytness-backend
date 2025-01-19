@@ -94,6 +94,8 @@ describe('Workflows Service', () => {
     nodesService = module.get<NodesService>(NodesService);
 
     await service.onModuleInit();
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   });
 
   it('should be defined', () => {
@@ -119,7 +121,11 @@ describe('Workflows Service', () => {
   it('should create a workflow', async () => {
     const newWorkflow = new Workflow('New Workflow', 'New Description');
     newWorkflow.id = 1;
-    oneWorkflow.owner = undefined;
+    newWorkflow.owner = undefined;
+    newWorkflow.nodes = [];
+    newWorkflow.entrypoints = [];
+    newWorkflow.status = WorkflowStatus.DISABLED;
+    newWorkflow.strandedNodes = [];
     await expect(
       service.createWorkflow(
         { id: 1 } as unknown as User,

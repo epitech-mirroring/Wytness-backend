@@ -216,14 +216,19 @@ describe('NodesService', () => {
     expect(r).not.toBeDefined();
     expect(nodeTrigger.next[0].next).toEqual([nodeAction]);
     expect(nodeAction.previous).toEqual(nodeTrigger.next[0]);
-    expect(nodeRepository.update).toHaveBeenCalledWith(
+    expect(nodeRepository.update).toHaveBeenNthCalledWith(
+      1,
+      { id: nodeAction.id },
+      {
+        previous: null,
+      },
+    );
+    expect(nodeRepository.update).toHaveBeenNthCalledWith(
+      2,
       { id: nodeAction.id },
       {
         previous: {
-          parent: {
-            id: nodeTrigger.id,
-          },
-          label: 'output',
+          id: nodeTrigger.next[0].id,
         },
       },
     );
