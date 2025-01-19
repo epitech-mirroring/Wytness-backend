@@ -26,8 +26,8 @@ export class User extends Resource {
   email: string;
   @Column('text')
   name: string;
-  @Column('text')
-  surname: string;
+  @Column('text', { nullable: true })
+  surname: string | null;
   @CreateDateColumn()
   createdAt: Date;
   @UpdateDateColumn()
