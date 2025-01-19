@@ -21,6 +21,7 @@ COPY ./entrypoint.sh ./
 COPY ./tsconfig.json ./
 COPY ./tsconfig.build.json ./
 COPY ./nest-cli.json ./
+COPY ./assets ./assets
 
 EXPOSE ${PORT}
 
