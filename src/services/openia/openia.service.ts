@@ -18,7 +18,7 @@ export class OpenAIService extends Service {
       'Integrate Wytness with OpenAI GPT models',
       [_openAIAction],
       {
-        color: '#34a853',
+        color: '#002351',
         useCron: false,
         useAuth: undefined,
         useWebhooks: false,
