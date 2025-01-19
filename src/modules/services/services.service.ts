@@ -17,6 +17,10 @@ import { User } from '../../types/user';
 import { FlowControlService } from '../../services/flow_control/flow-control.service';
 import { AirtableService } from '../../services/airtable/airtable.service';
 import { isProduction } from '../../types/global';
+import { WeatherService } from '../../services/weather/weather.service';
+import { OpenAIService } from '../../services/openia/openia.service';
+import { TanService } from '../../services/tan/tan.service';
+import { GeocodingService } from '../../services/geocoding/geo.service';
 
 @Injectable()
 export class ServicesService {
@@ -34,12 +38,24 @@ export class ServicesService {
     private _flowControlService: FlowControlService,
     @Inject(forwardRef(() => AirtableService))
     private _airtableService: AirtableService,
+    @Inject(forwardRef(() => WeatherService))
+    private _weatherService: WeatherService,
+    @Inject(forwardRef(() => OpenAIService))
+    private _openAIService: OpenAIService,
+    @Inject(forwardRef(() => TanService))
+    private _tanService: TanService,
+    @Inject(forwardRef(() => GeocodingService))
+    private _geocodingService: GeocodingService,
   ) {
     this.services = [
       this._discordService,
       this._spotifyService,
       this._flowControlService,
       this._airtableService,
+      this._weatherService,
+      this._openAIService,
+      this._tanService,
+      this._geocodingService,
     ];
   }
 
