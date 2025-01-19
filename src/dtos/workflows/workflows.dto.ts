@@ -121,3 +121,29 @@ export class WorkflowUpdateNodeDTO {
     y: number;
   };
 }
+
+export class WorkflowUpdateDTO {
+  @ApiProperty({
+    description: 'The name of the Workflow',
+    example: 'My Workflow',
+  })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({
+    description: 'The description of the Workflow',
+    example: 'This is a description of the Workflow',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({
+    description: 'The status of the Workflow',
+    example: 'enabled',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+}

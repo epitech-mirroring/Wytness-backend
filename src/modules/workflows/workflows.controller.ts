@@ -16,6 +16,7 @@ import { WorkflowsService } from './workflows.service';
 import {
   WorkflowCreateDTO,
   WorkflowCreateNodeDTO,
+  WorkflowUpdateDTO,
   WorkflowUpdateNodeDTO,
 } from '../../dtos/workflows/workflows.dto';
 import { AuthContext } from '../auth/auth.context';
@@ -153,7 +154,7 @@ export class WorkflowsController {
   })
   async updateWorkflow(
     @Param('workflowId') workflowId: string,
-    @Body() body: WorkflowCreateDTO,
+    @Body() body: WorkflowUpdateDTO,
   ) {
     const workflowIdN = parseInt(workflowId);
     if (isNaN(workflowIdN)) {

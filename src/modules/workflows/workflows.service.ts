@@ -385,9 +385,9 @@ export class WorkflowsService implements OnModuleInit {
   public async updateWorkflow(
     performer: User,
     workflowId: number,
-    status: string,
-    name: string,
-    description: string,
+    status?: string,
+    name?: string,
+    description?: string,
   ): Promise<Workflow | { error: string }> {
     const workflow = this.workflows.find(
       (workflow) => workflow.id === workflowId,
@@ -412,6 +412,9 @@ export class WorkflowsService implements OnModuleInit {
     if (status) {
       statusToUpdate =
         WorkflowStatus[status.toUpperCase() as keyof typeof WorkflowStatus];
+      if (!statusToUpdate) {
+        return { error: 'Invalid status' };
+      }
     }
 
     const dbWorkflow = await this._workflowRepository.update(
@@ -419,8 +422,8 @@ export class WorkflowsService implements OnModuleInit {
         id: workflowId,
       },
       {
-        name,
-        description,
+        name: name ? name : workflow.name,
+        description: description ? description : workflow.description,
         status: statusToUpdate ? statusToUpdate : workflow.status,
       },
     );
