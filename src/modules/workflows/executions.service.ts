@@ -121,9 +121,28 @@ export class ExecutionsService {
       return;
     }
 
-    return await this._workflowExecutionRepository.find({
+    const executions = await this._workflowExecutionRepository.find({
       where: { workflow: { id: workflowId } },
     });
+
+    for (const exec of executions) {
+      exec.workflow = workflow;
+
+      exec.trace = await this._workflowExecutionTraceRepository.findOne({
+        where: { id: exec.firstTraceId },
+        relations: ['next', 'node', 'next.node'],
+      });
+
+      const recursiveNodeSetup = (node: WorkflowExecutionTrace) => {
+        node.node = this._servicesService.getNode(node.node.id);
+        for (const next of node.next || []) {
+          recursiveNodeSetup(next);
+        }
+      };
+      recursiveNodeSetup(exec.trace);
+    }
+
+    return executions;
   }
 
   public async deleteExecution(

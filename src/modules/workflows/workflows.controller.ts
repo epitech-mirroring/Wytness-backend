@@ -21,6 +21,7 @@ import {
 import { AuthContext } from '../auth/auth.context';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
 import { NodesService } from './nodes.service';
+import { ExecutionsService } from './executions.service';
 
 @ApiTags('workflows')
 @Controller('workflows')
@@ -33,6 +34,9 @@ export class WorkflowsController {
 
   @Inject()
   private _authContext: AuthContext;
+
+  @Inject()
+  private _executionsService: ExecutionsService;
 
   @Private()
   @Get('/')
@@ -348,5 +352,38 @@ export class WorkflowsController {
       throw new BadRequestException(response.error);
     }
     return response.toJSON();
+  }
+
+  @Private()
+  @Get('/:workflowId/executions')
+  @ApiParam({
+    name: 'workflowId',
+    description: 'ID of the workflow',
+    type: 'number',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of executions',
+    schema: {
+      properties: {
+        executions: { type: 'array' },
+      },
+      example: { executions: [] },
+    },
+  })
+  async getExecutions(@Param('workflowId') workflowId: string) {
+    const workflowIdN = parseInt(workflowId);
+    if (isNaN(workflowIdN)) {
+      throw new BadRequestException('Invalid workflowId');
+    }
+    const response = await this._executionsService.getExecutions(
+      this._authContext.user,
+      workflowIdN,
+    );
+    if (response) {
+      return response.map((e) => e.toJSON());
+    } else {
+      throw new NotFoundException('Workflow not found');
+    }
   }
 }
