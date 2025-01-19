@@ -9,7 +9,7 @@ import {
 import { Node } from '../../services';
 import { WorkflowNodeNext } from './node.next.type';
 import { Workflow } from '../workflow.type';
-import { columnTypeJson } from '../../global';
+import { columnTypeJson, useSqlite } from '../../global';
 
 export class Position {
   @Column('int', { default: 100 })
@@ -29,6 +29,7 @@ export class WorkflowNode {
 
   @Column({
     type: columnTypeJson(),
+    default: useSqlite() ? '{}' : {},
   })
   config: any;
 

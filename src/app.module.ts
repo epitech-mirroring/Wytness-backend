@@ -22,7 +22,7 @@ import {
 import { Code, Node, Service, ServiceUser } from './types/services';
 import { Webhook } from './types/webhook/webhook.type';
 import * as process from 'node:process';
-import { isProduction } from './types/global';
+import { useSqlite } from './types/global';
 
 @Module({
   imports: [
@@ -34,18 +34,13 @@ import { isProduction } from './types/global';
     DiscordModule,
     WorkflowsModule,
     StatisticsModule,
-    isProduction()
+    useSqlite()
       ? TypeOrmModule.forRoot({
-          type: 'postgres',
-          host: process.env.DB_HOST,
-          port: parseInt(process.env.DB_PORT),
-          username: process.env.DB_USERNAME,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          schema: process.env.DB_SCHEMA,
+          type: 'sqlite',
+          database: ':memory:',
           entities: [
             User,
-            Rule<Resource>,
+            Rule,
             Policy,
             Workflow,
             WorkflowNode,
@@ -61,11 +56,16 @@ import { isProduction } from './types/global';
           synchronize: true,
         })
       : TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
+          type: 'postgres',
+          host: process.env.DB_HOST,
+          port: parseInt(process.env.DB_PORT),
+          username: process.env.DB_USERNAME,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          schema: process.env.DB_SCHEMA,
           entities: [
             User,
-            Rule,
+            Rule<Resource>,
             Policy,
             Workflow,
             WorkflowNode,

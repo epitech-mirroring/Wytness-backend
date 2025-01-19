@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Service } from './service.type';
 import { User } from '../user';
-import { columnTypeJson } from '../global';
+import { columnTypeJson, useSqlite } from '../global';
 
 @Entity('service_users')
 export class ServiceUser {
@@ -23,6 +23,7 @@ export class ServiceUser {
   user: User;
   @Column({
     type: columnTypeJson(),
+    default: useSqlite() ? '{}' : {},
   })
   customData: any;
   @CreateDateColumn()
