@@ -95,7 +95,7 @@ export class NodesService {
   ): Promise<void | { error: string }> {
     const dbNode = await this._workflowNodeRepository.findOne({
       where: { id: nodeId },
-      relations: ['previous'],
+      relations: ['previous', 'previous.parent'],
     });
 
     const ramNode = await this.getNode(workflowId, nodeId);
