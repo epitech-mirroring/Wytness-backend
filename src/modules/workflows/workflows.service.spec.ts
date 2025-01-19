@@ -85,10 +85,6 @@ describe('Workflows Service', () => {
             delete: jest.fn().mockResolvedValue(true),
           },
         },
-        {
-          provide: ExecutionsService,
-          useValue: {},
-        },
       ],
     }).compile();
 
