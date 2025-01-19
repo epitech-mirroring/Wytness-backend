@@ -8,6 +8,8 @@ import {
 import { WorkflowExecutionTrace } from './trace';
 import { WorkflowExecutionStatistics } from './statistics.type';
 import { Workflow } from '../workflow.type';
+import * as process from 'node:process';
+import { columnTypeEnum } from '../../global';
 
 export enum WorkflowExecutionStatus {
   RUNNING = 'RUNNING',
@@ -31,7 +33,7 @@ export class WorkflowExecution {
   @Column('int')
   firstTraceId: number;
   @Column({
-    type: 'enum',
+    type: columnTypeEnum(),
     enum: WorkflowExecutionStatus,
     default: WorkflowExecutionStatus.RUNNING,
   })

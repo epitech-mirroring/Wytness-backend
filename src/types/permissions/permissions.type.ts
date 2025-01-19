@@ -1,4 +1,4 @@
-import { Resource, ResourceType } from './resources.type';
+import { Resource } from './resources.type';
 import { User } from '../user';
 import {
   Column,

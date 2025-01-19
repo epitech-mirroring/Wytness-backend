@@ -2,19 +2,23 @@ import { Inject, Injectable } from '@nestjs/common';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { User } from '../../types/user';
 import { WorkflowExecutionStatus } from '../../types/workflow';
+import { ExecutionsService } from '../workflows/executions.service';
 
 @Injectable()
 export class StatisticsService {
   @Inject()
   private readonly _workflows: WorkflowsService;
 
+  @Inject()
+  private readonly _executions: ExecutionsService;
+
   async getStatisticsForWorkflow(workflowId: number, performer: User) {
-    const workflow = await this._workflows.getWorkflow(performer, workflowId);
+    const workflow = await this._workflows.getWorkflow(workflowId, performer);
     if (!workflow) {
       return { error: 'Workflow not found' };
     }
 
-    const executions = await this._workflows.getExecutions(
+    const executions = await this._executions.getExecutions(
       performer,
       workflowId,
     );

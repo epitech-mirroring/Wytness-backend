@@ -4,6 +4,7 @@ import { Action, Field, FieldType } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 import { WorkflowExecutionTrace } from '../../../../../types/workflow';
 import { AirtableService } from '../../../airtable.service';
+import { ExecutionsService } from '../../../../../modules/workflows/executions.service';
 
 @Injectable()
 export class DeleteRecordAction extends Action {
@@ -12,6 +13,9 @@ export class DeleteRecordAction extends Action {
 
   @Inject(forwardRef(() => WorkflowsService))
   public _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  public _executions: ExecutionsService;
 
   constructor() {
     super(
@@ -69,5 +73,9 @@ export class DeleteRecordAction extends Action {
 
   public getWorkflowService(): WorkflowsService {
     return this._w;
+  }
+
+  public getExecutionService(): ExecutionsService {
+    return this._executions;
   }
 }

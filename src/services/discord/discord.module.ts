@@ -6,28 +6,22 @@ import { DirectMessageCreatedTrigger } from './nodes/triggers/direct-messages/cr
 import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.action';
 import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.action';
 import { WorkflowsModule } from '../../modules/workflows/workflows.module';
-import {
-  serviceNodeProviders,
-  serviceProviders,
-  serviceUserProviders,
-} from '../../providers/database/providers/service.providers';
-import { DatabaseModule } from '../../providers/database/database.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Node, Service, ServiceUser } from '../../types/services';
+import { User } from '../../types/user';
 
 @Module({
   imports: [
     AuthModule,
     ConfigModule,
     forwardRef(() => WorkflowsModule),
-    DatabaseModule,
+    TypeOrmModule.forFeature([Service, Node, User, ServiceUser]),
   ],
   providers: [
     DiscordService,
     DirectMessageCreatedTrigger,
     DirectMessageSendAction,
     DirectMessageReactAction,
-    ...serviceProviders,
-    ...serviceNodeProviders,
-    ...serviceUserProviders,
   ],
   exports: [
     DiscordService,

@@ -1,26 +1,26 @@
-FROM node:lts as base
-
-COPY package*.json ./
+FROM oven/bun:1 AS base
+WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y bash curl && curl -1sLf \
 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | bash \
 && apt-get update && apt-get install -y infisical
+RUN apt-get install -y python3 make
+RUN apt install build-essential -y --no-install-recommends
 
 ARG PORT
 
 ENV PORT=${PORT}
 
 FROM base AS install
-RUN npm install
+COPY package*.json ./
+COPY bun.lockb ./
+RUN bun install
 
-COPY ./prisma ./prisma
 COPY ./src ./src
 COPY ./entrypoint.sh ./
 COPY ./tsconfig.json ./
 COPY ./tsconfig.build.json ./
 COPY ./nest-cli.json ./
-
-RUN npx prisma generate
 
 EXPOSE ${PORT}
 

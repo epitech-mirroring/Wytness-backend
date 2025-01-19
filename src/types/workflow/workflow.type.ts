@@ -12,6 +12,7 @@ import { Actions, Resource } from '../permissions';
 import { WorkflowNode } from './nodes';
 import { WorkflowExecution } from './executions';
 import { NodeType } from '../services';
+import { columnTypeEnum } from '../global';
 
 export type WorkflowBasicInfo = {
   id: number;
@@ -58,7 +59,7 @@ export class Workflow extends Resource {
     example: 'enabled',
   })
   @Column({
-    type: 'enum',
+    type: columnTypeEnum(),
     enum: WorkflowStatus,
     default: WorkflowStatus.DISABLED,
   })
@@ -132,5 +133,40 @@ export class Workflow extends Resource {
         this.nodes.push(node);
       }
     }
+  }
+
+  public toJSON() {
+    const services = [];
+    const recursiveServiceSetup = (node: WorkflowNode) => {
+      services.push(node.node.service.name);
+      for (const next of node.next) {
+        for (const nextNode of next.next) {
+          recursiveServiceSetup(nextNode);
+        }
+      }
+    };
+    for (const node of this.entrypoints) {
+      recursiveServiceSetup(node);
+    }
+    for (const node of this.strandedNodes) {
+      recursiveServiceSetup(node);
+    }
+
+    return {
+      id: this.id,
+      name: this.name,
+      description: this.description,
+      ownerId: this.owner.id,
+      serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
+      status: this.status,
+    } as WorkflowBasicInfo;
+  }
+
+  public stringify() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString() {
+    return this.stringify();
   }
 }

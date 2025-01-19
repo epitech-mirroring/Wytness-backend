@@ -10,14 +10,15 @@ import { TokenPayload } from '../../types/auth';
 import { Repository } from 'typeorm';
 import { User } from '../../types/user';
 import { PermissionsService } from '../permissions/permissions.service';
-import * as process from 'node:process';
+import { InjectRepository } from '@nestjs/typeorm';
+import { isProduction } from '../../types/global';
 
 @Injectable()
 export class AuthService {
   @Inject()
   private _authContext: AuthContext;
 
-  @Inject('USER_REPOSITORY')
+  @InjectRepository(User)
   private _userRepository: Repository<User>;
 
   @Inject()
@@ -33,7 +34,7 @@ export class AuthService {
       .then((decodedToken) => {
         return decodedToken;
       })
-      .catch((error) => {
+      .catch(() => {
         return null;
       });
     return !!decodedToken;
@@ -83,7 +84,7 @@ export class AuthService {
     if ('error' in result) {
       return result;
     }
-    if (process.env.NODE_ENV === 'development') {
+    if (!isProduction()) {
       result.debug = await this.firebaseService
         .getAuth()
         .currentUser.getIdToken();
@@ -135,10 +136,9 @@ export class AuthService {
       .createCustomToken(user.uid);
     const result = {
       token,
-      debug:
-        process.env.NODE_ENV === 'development'
-          ? await this.firebaseService.getAuth().currentUser.getIdToken()
-          : undefined,
+      debug: !isProduction()
+        ? await this.firebaseService.getAuth().currentUser.getIdToken()
+        : undefined,
     };
     await this.firebaseService.getAuth().signOut();
     return result;

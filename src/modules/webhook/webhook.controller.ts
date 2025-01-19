@@ -13,7 +13,7 @@ import { WebhookService } from './webhook.service';
 import { Private } from '../auth/decorators/private.decorator';
 import { AuthContext } from '../auth/auth.context';
 import { CreateWebhookDTO } from '../../dtos/webhooks/webhooks.dto';
-import { WorkflowsService } from '../workflows/workflows.service';
+import { NodesService } from '../workflows/nodes.service';
 
 @Controller('webhooks')
 export class WebhookController {
@@ -24,7 +24,7 @@ export class WebhookController {
   private _authContext: AuthContext;
 
   @Inject()
-  private _workflowsService: WorkflowsService;
+  private _nodeService: NodesService;
 
   @Public()
   @Post('/:id')
@@ -47,7 +47,7 @@ export class WebhookController {
     if (!body.nodeId) {
       throw new BadRequestException('Node ID is required');
     }
-    const node = this._workflowsService.findNodeById(body.nodeId);
+    const node = this._nodeService.findNodeById(body.nodeId);
     return this._webhookService.createWebhook(
       this._authContext.user,
       null,

@@ -2,35 +2,34 @@ import { forwardRef, Module } from '@nestjs/common';
 import { WorkflowsService } from './workflows.service';
 import { AuthModule } from '../auth/auth.module';
 import { ServicesModule } from '../services/services.module';
-import { UsersModule } from '../users/users.module';
 import { WorkflowsController } from './workflows.controller';
-import {
-  workflowExecutionProviders,
-  workflowExecutionTraceProviders,
-  workflowNodeNextProviders,
-  workflowNodeProviders,
-  workflowProviders,
-} from '../../providers/database/providers/workflow.providers';
-import { DatabaseModule } from '../../providers/database/database.module';
 import { PermissionsModule } from '../permissions/permissions.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  Workflow,
+  WorkflowExecution,
+  WorkflowExecutionTrace,
+  WorkflowNode,
+  WorkflowNodeNext,
+} from '../../types/workflow';
+import { NodesService } from './nodes.service';
+import { ExecutionsService } from './executions.service';
 
 @Module({
   imports: [
     AuthModule,
     forwardRef(() => ServicesModule),
-    UsersModule,
-    DatabaseModule,
     PermissionsModule,
+    TypeOrmModule.forFeature([
+      Workflow,
+      WorkflowNode,
+      WorkflowNodeNext,
+      WorkflowExecution,
+      WorkflowExecutionTrace,
+    ]),
   ],
-  providers: [
-    WorkflowsService,
-    ...workflowNodeProviders,
-    ...workflowProviders,
-    ...workflowExecutionProviders,
-    ...workflowExecutionTraceProviders,
-    ...workflowNodeNextProviders,
-  ],
+  providers: [WorkflowsService, NodesService, ExecutionsService],
   controllers: [WorkflowsController],
-  exports: [WorkflowsService],
+  exports: [WorkflowsService, NodesService, ExecutionsService],
 })
 export class WorkflowsModule {}

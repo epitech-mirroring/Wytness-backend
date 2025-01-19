@@ -17,7 +17,6 @@ export class WorkflowNodeNext {
 
   @JoinColumn()
   @ManyToOne(() => WorkflowNode, (workflowNode) => workflowNode.next, {
-    eager: true,
     cascade: true,
     onDelete: 'CASCADE',
   })

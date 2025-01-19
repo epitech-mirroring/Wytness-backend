@@ -5,28 +5,18 @@ import { ConfigModule } from '@nestjs/config';
 import { PlayingMusicTrigger } from './nodes/triggers/status/playing.trigger';
 import { PausePlaybackAction } from './nodes/actions/player/pause.action';
 import { WorkflowsModule } from '../../modules/workflows/workflows.module';
-import { DatabaseModule } from '../../providers/database/database.module';
-import {
-  serviceNodeProviders,
-  serviceProviders,
-  serviceUserProviders,
-} from '../../providers/database/providers/service.providers';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Node, Service, ServiceUser } from '../../types/services';
+import { User } from '../../types/user';
 
 @Module({
   imports: [
     AuthModule,
     ConfigModule,
     forwardRef(() => WorkflowsModule),
-    DatabaseModule,
+    TypeOrmModule.forFeature([Service, User, Node, ServiceUser]),
   ],
-  providers: [
-    SpotifyService,
-    PlayingMusicTrigger,
-    PausePlaybackAction,
-    ...serviceProviders,
-    ...serviceUserProviders,
-    ...serviceNodeProviders,
-  ],
+  providers: [SpotifyService, PlayingMusicTrigger, PausePlaybackAction],
   exports: [SpotifyService, PlayingMusicTrigger, PausePlaybackAction],
 })
 export class SpotifyModule {}

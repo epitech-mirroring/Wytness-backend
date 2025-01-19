@@ -12,6 +12,7 @@ import {
   WorkflowExecutionStatus,
   WorkflowExecutionTrace,
 } from '../../../../types/workflow';
+import { ExecutionsService } from '../../../../modules/workflows/executions.service';
 
 @Injectable()
 export class ForAction extends Action {
@@ -20,6 +21,9 @@ export class ForAction extends Action {
 
   @Inject(forwardRef(() => WorkflowsService))
   public _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  public _executions: ExecutionsService;
 
   constructor() {
     super(
@@ -66,7 +70,7 @@ export class ForAction extends Action {
         }
         trace.output = jsonList[i];
         trace.setCurrentData(jsonList[i]);
-        await this.getWorkflowService().runNode(
+        await this._executions.runNode(
           next,
           jsonList[i],
           workflowExecution,
@@ -89,5 +93,9 @@ export class ForAction extends Action {
 
   getWorkflowService(): WorkflowsService {
     return this._w;
+  }
+
+  getExecutionService(): ExecutionsService {
+    return this._executions;
   }
 }

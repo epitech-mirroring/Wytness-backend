@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { MinimalConfig, Node } from '../../../services';
 import { WorkflowTraceStatistics } from './statistics.type';
+import { columnTypeJson } from '../../../global';
 
 @Entity('workflow_traces')
 export class WorkflowExecutionTrace {
@@ -17,11 +18,17 @@ export class WorkflowExecutionTrace {
   @JoinColumn()
   @ManyToOne(() => Node)
   node: Node;
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   input: any;
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   output: any;
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   config: any;
 
   @Column('simple-array')

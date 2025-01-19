@@ -9,6 +9,7 @@ import {
 import { Node } from '../../services';
 import { WorkflowNodeNext } from './node.next.type';
 import { Workflow } from '../workflow.type';
+import { columnTypeJson } from '../../global';
 
 export class Position {
   @Column('int', { default: 100 })
@@ -23,10 +24,12 @@ export class WorkflowNode {
   id: number;
 
   @JoinColumn()
-  @ManyToOne(() => Node, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Node, { cascade: true, onDelete: 'CASCADE' })
   node: Node;
 
-  @Column('simple-json')
+  @Column({
+    type: columnTypeJson(),
+  })
   config: any;
 
   @JoinColumn()
@@ -58,6 +61,7 @@ export class WorkflowNode {
   constructor(id: number, config: any) {
     this.id = id;
     this.config = config;
+    this['toJSON'] = this.toJSON;
   }
 
   public addNext(node: WorkflowNode, label: string) {
@@ -85,5 +89,28 @@ export class WorkflowNode {
       next.next = [];
     }
     next.next.push(node);
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      config: this.config,
+      nodeId: this.node.id,
+      next: (this.next ? this.next : []).map((next) => {
+        return {
+          label: next.label,
+          next: next.next.map((node) => node.toJSON()),
+        };
+      }),
+      position: this.position,
+    };
+  }
+
+  public stringify() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString() {
+    return this.stringify();
   }
 }

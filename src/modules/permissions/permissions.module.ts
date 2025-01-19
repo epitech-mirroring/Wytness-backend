@@ -1,22 +1,13 @@
 import { Module } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { ResourcesService } from './resources.service';
-import { DatabaseModule } from '../../providers/database/database.module';
-import {
-  policiesProviders,
-  rulesProviders,
-} from '../../providers/database/providers/permission.providers';
-import { userProviders } from '../../providers/database/providers/user.providers';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Policy, Rule } from '../../types/permissions';
+import { User } from '../../types/user';
 
 @Module({
-  imports: [DatabaseModule],
-  providers: [
-    PermissionsService,
-    ResourcesService,
-    ...rulesProviders,
-    ...policiesProviders,
-    ...userProviders,
-  ],
+  imports: [TypeOrmModule.forFeature([Rule, Policy, User])],
+  providers: [PermissionsService, ResourcesService],
   exports: [PermissionsService],
 })
 export class PermissionsModule {}

@@ -14,6 +14,10 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ExecutionsService } from '../../modules/workflows/executions.service';
+import process from 'node:process';
+import { columnTypeEnum } from '../global';
+import { stringify } from 'ts-jest';
 
 export enum NodeType {
   TRIGGER = 'trigger',
@@ -35,7 +39,7 @@ export abstract class Node {
   @Column('text', { nullable: true })
   public description?: string;
   @Column({
-    type: 'enum',
+    type: columnTypeEnum(),
     enum: NodeType,
     default: NodeType.ACTION,
   })
@@ -112,6 +116,8 @@ export abstract class Node {
 
   public abstract getWorkflowService(): WorkflowsService;
 
+  public abstract getExecutionService(): ExecutionsService;
+
   public async _run(
     label: string,
     data: any,
@@ -136,7 +142,7 @@ export abstract class Node {
       return;
     }
     for (const next of config._next[label]) {
-      await this.getWorkflowService().runNode(
+      await this.getExecutionService().runNode(
         next,
         result,
         workflowExecution,
@@ -208,6 +214,25 @@ export abstract class Node {
       msg,
       ...args,
     );
+  }
+
+  public toJSON(includeService: boolean = true): any {
+    return {
+      id: this.id,
+      name: this.name,
+      description: this.description,
+      type: this.type,
+      service: includeService ? this.service.toJSON() : this.service.name,
+      labels: this.labels,
+    };
+  }
+
+  public stringify(): string {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString(): string {
+    return this.stringify();
   }
 }
 

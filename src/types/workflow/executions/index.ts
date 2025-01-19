@@ -1,4 +1,5 @@
 import { Column } from 'typeorm';
+import { columnTypeTimestamp } from '../../global';
 
 export * from './execution.type';
 export * from './statistics.type';
@@ -12,8 +13,12 @@ export class WorkflowExecutionStatisticsDataUsed {
 }
 
 export class WorkflowExecutionStatisticsDuration {
-  @Column('timestamp')
+  @Column({
+    type: columnTypeTimestamp(),
+  })
   start: Date;
-  @Column('timestamp')
+  @Column({
+    type: columnTypeTimestamp(),
+  })
   end: Date;
 }

@@ -7,6 +7,8 @@ import { DirectMessageSendAction } from './nodes/actions/direct-messages/send.ac
 import { DirectMessageReactAction } from './nodes/actions/direct-messages/react.action';
 import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { OAuthDefaultConfig, ServiceWithOAuth } from '../../types/services';
+import { ExecutionsService } from '../../modules/workflows/executions.service';
+import { isProduction } from '../../types/global';
 
 export type GatewayMessage = {
   op: number;
@@ -22,6 +24,9 @@ export class DiscordService extends ServiceWithOAuth {
 
   @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  private _executions: ExecutionsService;
 
   ws: websocket.w3cwebsocket;
   ready = false;
@@ -57,7 +62,7 @@ export class DiscordService extends ServiceWithOAuth {
   }
 
   getRedirectUri(): string {
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction()) {
       return 'https://wytness.fr/services/discord/connect';
     }
     return 'http://localhost:3000/services/discord/connect';
@@ -143,7 +148,7 @@ export class DiscordService extends ServiceWithOAuth {
         if (message.author.bot) {
           return;
         }
-        await this._w.findAndTriggerGlobal(message, this._dmNew.id);
+        await this._executions.findAndTriggerGlobal(message, this._dmNew.id);
         break;
       default:
         this.warn('Unhandled discord event', event);

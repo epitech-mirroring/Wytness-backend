@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Inject,
   NotFoundException,
@@ -21,12 +20,16 @@ import {
 } from '../../dtos/workflows/workflows.dto';
 import { AuthContext } from '../auth/auth.context';
 import { ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import { NodesService } from './nodes.service';
 
 @ApiTags('workflows')
 @Controller('workflows')
 export class WorkflowsController {
   @Inject()
   private _workflowsService: WorkflowsService;
+
+  @Inject()
+  private _nodeService: NodesService;
 
   @Inject()
   private _authContext: AuthContext;
@@ -90,8 +93,8 @@ export class WorkflowsController {
     }
 
     const workflow = await this._workflowsService.getWorkflow(
-      this._authContext.user,
       workflowIdN,
+      this._authContext.user,
     );
     if (workflow) {
       return workflow;
@@ -163,7 +166,7 @@ export class WorkflowsController {
     if ('error' in workflow) {
       throw new BadRequestException(workflow.error);
     }
-    return this._workflowsService.workflowToJsonObject(workflow);
+    return workflow.toJSON();
   }
 
   @Private()
@@ -186,7 +189,7 @@ export class WorkflowsController {
     if ('error' in created) {
       throw new BadRequestException(created.error);
     }
-    return this._workflowsService.workflowToJsonObject(created);
+    return created.toJSON();
   }
 
   @Private()
@@ -247,15 +250,16 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid nodeId');
     }
 
-    const response = await this._workflowsService.deleteNode(
+    const response = await this._nodeService.deleteNode(
       this._authContext.user,
       workflowIdN,
       nodeIdN,
     );
     if (response) {
+      throw new BadRequestException(response.error);
+    } else {
       return;
     }
-    throw new NotFoundException('Node not found');
   }
 
   @Private()
@@ -292,19 +296,19 @@ export class WorkflowsController {
     if (isNaN(nodeIdN)) {
       throw new BadRequestException('Invalid nodeId');
     }
-    const response = await this._workflowsService.updateNode(
+    const response = await this._nodeService.updateNode(
       this._authContext.user,
       workflowIdN,
       nodeIdN,
       body.config,
       body.previous,
-      body.label,
+      body.label || null,
       body.position,
     );
     if ('error' in response) {
       throw new BadRequestException(response.error);
     }
-    return this._workflowsService.nodeToJsonObject(response);
+    return response.toJSON();
   }
 
   @Private()
@@ -331,7 +335,7 @@ export class WorkflowsController {
       throw new BadRequestException('Invalid workflowId');
     }
 
-    const response = await this._workflowsService.addNodeToWorkflow(
+    const response = await this._nodeService.addNodeToWorkflow(
       this._authContext.user,
       body.id,
       workflowIdN,
@@ -343,6 +347,6 @@ export class WorkflowsController {
     if ('error' in response) {
       throw new BadRequestException(response.error);
     }
-    return this._workflowsService.nodeToJsonObject(response);
+    return response.toJSON();
   }
 }

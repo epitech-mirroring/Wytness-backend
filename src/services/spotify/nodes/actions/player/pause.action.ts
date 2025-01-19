@@ -1,13 +1,17 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
-import { Action } from 'src/types/services/action.type';
-import { ServiceWithOAuth } from 'src/types/services/service.type';
+import { Action } from '../../../../../types/services';
+import { ServiceWithOAuth } from '../../../../../types/services';
 import { WorkflowsService } from '../../../../../modules/workflows/workflows.service';
 import { WorkflowExecutionTrace } from '../../../../../types/workflow';
+import { ExecutionsService } from '../../../../../modules/workflows/executions.service';
 
 @Injectable()
 export class PausePlaybackAction extends Action {
   @Inject(forwardRef(() => WorkflowsService))
   private _w: WorkflowsService;
+
+  @Inject(forwardRef(() => ExecutionsService))
+  public _executions: ExecutionsService;
 
   constructor() {
     super('Pause Playback', 'Pause the playback of the user');
@@ -36,5 +40,9 @@ export class PausePlaybackAction extends Action {
 
   public getWorkflowService(): WorkflowsService {
     return this._w;
+  }
+
+  public getExecutionService(): ExecutionsService {
+    return this._executions;
   }
 }

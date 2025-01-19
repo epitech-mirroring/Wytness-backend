@@ -1,5 +1,5 @@
 import { Node } from './node.type';
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Trigger } from './trigger.type';
 import { ServiceConnectDTO } from '../../dtos/services/services.dto';
 import { User } from '../user';
@@ -16,6 +16,7 @@ import { ServiceUser } from './connection.type';
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 import { WorkflowExecutionTrace } from '../workflow';
 import { base64_urlencode } from '../global';
+import { InjectRepository } from '@nestjs/typeorm';
 
 export class ServiceMetadata {
   @Column('boolean')
@@ -72,10 +73,10 @@ export abstract class Service implements OnModuleInit {
     this.serviceMetadata = serviceMetadata || DefaultServiceMetadata;
   }
 
-  @Inject('SERVICE_REPOSITORY')
+  @InjectRepository(Service)
   private _serviceRepository: Repository<Service>;
 
-  @Inject('SERVICE_NODE_REPOSITORY')
+  @InjectRepository(Node)
   private _nodeRepository: Repository<Node>;
 
   async onModuleInit(): Promise<void> {
@@ -217,6 +218,23 @@ export abstract class Service implements OnModuleInit {
     trace.statistics.dataUsed.download += receivedSize;
     return response;
   };
+
+  public toJSON() {
+    return {
+      name: this.name,
+      description: this.description,
+      nodes: this.nodes.map((node) => node.toJSON(false)),
+      serviceMetadata: this.serviceMetadata,
+    };
+  }
+
+  public stringify() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  public toString() {
+    return this.stringify();
+  }
 }
 
 export type OAuthEndpoints = {
@@ -249,7 +267,7 @@ export abstract class ServiceWithAuth extends Service {
     super(name, description, nodes, serviceMetadata);
   }
 
-  @Inject('SERVICE_USER_REPOSITORY')
+  @InjectRepository(ServiceUser)
   protected _serviceUserRepository: Repository<ServiceUser>;
 
   public abstract isUserConnected(userId: number): Promise<boolean>;
@@ -539,7 +557,7 @@ export abstract class ServiceWithCode extends ServiceWithAuth {
     });
   }
 
-  @Inject('CODE_REPOSITORY')
+  @InjectRepository(Code)
   private _codeRepository: Repository<Code>;
 
   async isUserConnected(userId: number): Promise<boolean> {

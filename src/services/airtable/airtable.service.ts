@@ -8,6 +8,7 @@ import { GetBaseSchemaAction } from './nodes/actions/bases/get-base-schema.actio
 import { GetOneRecordAction } from './nodes/actions/records/get-one-record.action';
 import { UpdateRecordAction } from './nodes/actions/records/update-record.action';
 import { DeleteRecordAction } from './nodes/actions/records/delete-record.action';
+import { isProduction } from '../../types/global';
 
 @Injectable()
 export class AirtableService extends ServiceWithOAuth {
@@ -62,7 +63,7 @@ export class AirtableService extends ServiceWithOAuth {
   }
 
   getRedirectUri(): string {
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction()) {
       return 'https://wytness.fr/services/airtable/connect';
     }
     return 'http://127.0.0.1:3000/services/airtable/connect';

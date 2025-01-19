@@ -11,16 +11,17 @@ import {
 } from '../../types/permissions';
 import { User } from '../../types/user';
 import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class PermissionsService {
-  @Inject('POLICIES_REPOSITORY')
+  @InjectRepository(Policy)
   private readonly _policiesRepository: Repository<Policy>;
 
-  @Inject('RULES_REPOSITORY')
+  @InjectRepository(Rule)
   private readonly _rulesRepository: Repository<Rule<Resource>>;
 
-  @Inject('USER_REPOSITORY')
+  @InjectRepository(User)
   private readonly _usersRepository: Repository<User>;
 
   constructor(@Inject() private _resourcesService: ResourcesService) {
