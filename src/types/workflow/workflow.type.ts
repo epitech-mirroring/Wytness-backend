@@ -156,7 +156,7 @@ export class Workflow extends Resource {
       id: this.id,
       name: this.name,
       description: this.description,
-      ownerId: this.owner.id,
+      ownerId: this.owner?.id,
       serviceUsed: services.filter((v, i, a) => a.indexOf(v) === i),
       status: this.status,
     } as WorkflowBasicInfo;

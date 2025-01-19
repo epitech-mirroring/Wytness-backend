@@ -187,12 +187,24 @@ export class NodesService {
     ramNodeB.previous = ramNodeA.next.find((n) => n.label === label);
 
     // Connect node in DB
-    const dbNext = await this._workflowNodeNextRepository.findOne({
+    const previousOutput = await this._workflowNodeNextRepository.findOne({
       where: { parent: { id: fromNodeId }, label },
-      relations: ['next'],
     });
-    dbNext.next.push(dbNodeB);
-    await this._workflowNodeNextRepository.save(dbNext);
+
+    if (!previousOutput) {
+      return { error: 'Output not found' };
+    }
+
+    await this._workflowNodeRepository.update(
+      {
+        id: toNodeId,
+      },
+      {
+        previous: {
+          id: previousOutput.id,
+        },
+      },
+    );
 
     // Remove the newly connected node from the stranded nodes
     workflow.strandedNodes = workflow.strandedNodes.filter(
@@ -386,10 +398,11 @@ export class NodesService {
         node: {
           id: nodeId,
         },
-        next: serviceNode.labels.map((label) => ({
-          label,
-          next: [],
-        })),
+        next: [],
+        // @ts-expect-error Type 'Workflow' is not assignable to type 'any'
+        workflow: {
+          id: workflowId,
+        },
       })
     ).identifiers[0].id;
 
@@ -412,6 +425,7 @@ export class NodesService {
 
     const node = new WorkflowNode(id, config);
     node.workflow = workflow;
+    node.previous = null;
     node.node = this._servicesService.getNode(nodeId);
     node.position = position || { x: 100, y: 100 };
     node.next = dbNode.next.map((next) => {
@@ -423,14 +437,26 @@ export class NodesService {
       };
     });
 
-    // Connect the node to the previous node
-    if (previousNode) {
-      await this.connectNode(workflowId, previousNodeId, previousNodeLabel, id);
-    } else if (serviceNode.type !== NodeType.TRIGGER) {
+    if (serviceNode.type !== NodeType.TRIGGER) {
       workflow.strandedNodes.push(node);
     } else if (serviceNode.type === NodeType.TRIGGER) {
       workflow.entrypoints.push(node);
     }
+    workflow.nodes.push(node);
+    // Connect the node to the previous node
+
+    if (previousNode) {
+      const r = await this.connectNode(
+        workflowId,
+        previousNodeId,
+        previousNodeLabel,
+        id,
+      );
+      if (r) {
+        return r;
+      }
+    }
+    return node;
   }
 
   private async removeNodeFromWorkflow(

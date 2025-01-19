@@ -146,6 +146,9 @@ export abstract class Service implements OnModuleInit {
       }
       localNode.id = node.id;
     }
+    for (const node of this.nodes) {
+      node.service = this;
+    }
   }
 
   public getName(): string {

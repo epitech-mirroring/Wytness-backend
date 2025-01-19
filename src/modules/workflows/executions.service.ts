@@ -84,6 +84,9 @@ export class ExecutionsService {
     const trace = execution.trace;
     const recursiveSave = async (node: WorkflowExecutionTrace) => {
       const saved = await this._workflowExecutionTraceRepository.insert(node);
+      if (saved.identifiers.length !== 1) {
+        throw new Error('Could not save trace');
+      }
       for (const next of node.next || []) {
         await recursiveSave(next);
       }
@@ -91,8 +94,12 @@ export class ExecutionsService {
     };
     const r = await recursiveSave(trace);
     execution.firstTraceId = r.identifiers[0].id;
-    const e = this._workflowExecutionRepository.create(execution);
-    await this._workflowExecutionRepository.insert(e);
+    await this._workflowExecutionRepository.insert({
+      firstTraceId: execution.firstTraceId,
+      status: execution.status,
+      workflow: { id: execution.workflow.id },
+      statistics: execution.statistics,
+    });
   }
 
   public async getExecutions(performer: User, workflowId: number) {

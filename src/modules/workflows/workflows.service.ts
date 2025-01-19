@@ -78,11 +78,13 @@ export class WorkflowsService implements OnModuleInit {
       'allow',
     );
 
-    const dbWorkflows = await this._workflowRepository.find();
+    setTimeout(async () => {
+      const dbWorkflows = await this._workflowRepository.find();
 
-    for (const dbWorkflow of dbWorkflows) {
-      await this.loadWorkflow(dbWorkflow.id);
-    }
+      for (const dbWorkflow of dbWorkflows) {
+        await this.loadWorkflow(dbWorkflow.id);
+      }
+    }, 1000);
 
     // setInterval(async () => {
     //   workflow: for (const workflow of this.workflows) {
@@ -144,24 +146,30 @@ export class WorkflowsService implements OnModuleInit {
       return;
     }
 
+    const parseWorkflowStatus = (status: string): WorkflowStatus => {
+      return WorkflowStatus[
+        status.toUpperCase() as keyof typeof WorkflowStatus
+      ];
+    };
+
     const newWorkflow = new Workflow(workflow.name, workflow.description);
     newWorkflow.id = workflow.id;
     newWorkflow.owner = workflow.owner;
-    newWorkflow.status = workflow.status;
+    newWorkflow.status = parseWorkflowStatus(workflow.status);
     newWorkflow.nodes = [];
     newWorkflow.entrypoints = [];
     newWorkflow.strandedNodes = [];
+    this.workflows.push(newWorkflow);
 
     await this.loadWorkflowNodes(newWorkflow);
 
-    this.workflows.push(newWorkflow);
     return newWorkflow;
   }
 
   public async loadWorkflowNodes(workflow: Workflow): Promise<void> {
     const workflowWithNodes = await this._workflowRepository.findOne({
       where: { id: workflow.id },
-      relations: ['nodes'],
+      relations: ['nodes', 'nodes.previous'],
     });
 
     if (!workflowWithNodes) {
